@@ -35,7 +35,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   // PERBAIKAN: Gunakan useCallback untuk memastikan fetchData stabil.
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(`/api/realtime`, {
+      const res = await fetch(`/api/log`, {
         cache: "no-store",
       });
 

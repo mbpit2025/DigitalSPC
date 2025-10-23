@@ -1,5 +1,6 @@
 // data-collector/config.js
 
+
 // Definisi 6 PLC (Minimalis)
 const PLCS = [
     { 
@@ -14,7 +15,7 @@ const PLCS = [
       } 
     },
     { 
-      id: "2", name: 'HEATING_LINE_1', ip: '10.2.13.75', port: 502, unitId: 1,
+      id: "2", name: 'HEATING_LINE_1', ip: '10.2.13.75', port: 5000, unitId: 2,
       tagRanges: {
           'data4|data5': { min: 50.7, max: 54 }, // primer1
           'data6|data7': { min: 51, max: 55 }, //primer2 
@@ -53,7 +54,7 @@ const PLCS = [
 
 const DATA_POINTS_MAP = [];
 const START_REGISTER = 5000;
-const TOTAL_POINTS = 24;
+const TOTAL_POINTS = 25;
 const GLOBAL_DEFAULT_RANGE = { min: 50, max: 55 }; // Jika tidak ada konfigurasi spesifik
 
 for (let i = 0; i < TOTAL_POINTS; i++) {
@@ -66,7 +67,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 
 // Interval Polling (dalam milidetik)
-const POLLING_INTERVAL = 30000; // 30 detik
+const POLLING_INTERVAL = 1000; // 3 detik
 
 module.exports = {
     PLCS,

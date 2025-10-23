@@ -17,8 +17,7 @@ export async function GET(request: Request, {params} : {params : Promise<{ plc_i
     // LIMIT dan OFFSET dihilangkan karena Anda meminta 'semua data'.
     const query = `
       SELECT id, plc_id, plc_name, tag_name, value, timestamp 
-      FROM plc_data 
-      WHERE plc_id = ? 
+      FROM plc_data  
       ORDER BY timestamp ASC
     `;
     

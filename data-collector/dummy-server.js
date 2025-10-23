@@ -194,7 +194,7 @@ async function pollingLoop() {
   }
 
   const data = generateDummyData();
-  pushLatestData(data);
+  // pushLatestData(data);
 
   try {
     await saveHistoricalData(data);

@@ -1,0 +1,14 @@
+{
+  "BPM_LINE_1_data1": "data1 | Speed Conveyor",
+  "BPM_LINE_1_data2": "data2 | Hot 1",
+  "BPM_LINE_1_data3": "data3 | Hot 2",
+  "BPM_LINE_1_data8": "data8 | Hot 3",
+  "BPM_LINE_1_data9": "data9 | Hot 4",
+  "BPM_LINE_1_data4": "data4 | Cold 1",
+  "BPM_LINE_1_data5": "data5 | Cold 2",
+  "BPM_LINE_1_data6": "data6 | Cold 3",
+  "BPM_LINE_1_data7": "data7 | Cold 4",
+  "HEATING_LINE_1_data1": "data1 | Conveyor Speed",
+  "HEATING_LINE_1_data10": "data10 | Shoe detection 1",
+  "HEATING_LINE_1_data11": "data11 | Shoe Detection 2"
+}
