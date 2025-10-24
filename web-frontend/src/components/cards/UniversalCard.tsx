@@ -71,7 +71,7 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
   // 🕒 Jalankan pertama kali + interval tiap 10 detik
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 10000); // 10 detik
+    const interval = setInterval(fetchData, 30000); // 30 detik
     return () => clearInterval(interval);
   }, [fetchData]);
 

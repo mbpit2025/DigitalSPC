@@ -18,7 +18,8 @@ export async function GET(request: Request, {params} : {params : Promise<{ plc_i
     const query = `
       SELECT id, plc_id, plc_name, tag_name, value, timestamp 
       FROM plc_data  
-      ORDER BY timestamp ASC
+      WHERE plc_id = ?
+      ORDER BY timestamp ASC LIMIT 500
     `;
     
     // Nilai plc_id dimasukkan sebagai prepared statement value untuk keamanan

@@ -6,6 +6,7 @@ import { AnnotationOptions } from "chartjs-plugin-annotation";
  * Base chart options (default untuk semua chart line).
  */
 export const baseLineChartOptions: ChartOptions<"line"> = {
+  animation: false,
   responsive: true,
   maintainAspectRatio: false,
   backgroundColor: "#1E1E2F",

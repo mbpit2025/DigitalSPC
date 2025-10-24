@@ -67,7 +67,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 
 // Interval Polling (dalam milidetik)
-const POLLING_INTERVAL = 1000; // 3 detik
+const POLLING_INTERVAL = 5000; // 5 detik
 
 module.exports = {
     PLCS,

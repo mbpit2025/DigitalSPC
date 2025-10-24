@@ -13,7 +13,7 @@ const cron = require("node-cron");
 // Konstanta
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
 const CHECK_HISTORY_INTERVAL_MS = 15000;
-const HISTORY_WINDOW_MINUTES = 20;
+const HISTORY_WINDOW_MINUTES = 30;
 
 // Dummy Scheduler
 const START_HOUR = 7;
@@ -194,7 +194,7 @@ async function pollingLoop() {
   }
 
   const data = generateDummyData();
-  // pushLatestData(data);
+  pushLatestData(data);
 
   try {
     await saveHistoricalData(data);

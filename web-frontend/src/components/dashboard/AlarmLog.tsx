@@ -18,41 +18,41 @@ interface AlarmLogData {
 
 // Data dummy alarm log
 const tableData: AlarmLogData[] = [
-  // {
-  //   id: 1,
-  //   mesin: "Mesin Injection 01",
-  //   time: "2025-09-12 08:35:20",
-  //   category: "Overheat",
-  //   status: "Active",
-  // },
-  // {
-  //   id: 2,
-  //   mesin: "Mesin Press 02",
-  //   time: "2025-09-12 08:40:05",
-  //   category: "Emergency Stop",
-  //   status: "Acknowledged",
-  // },
-  // {
-  //   id: 3,
-  //   mesin: "Mesin Cutting 03",
-  //   time: "2025-09-12 09:10:12",
-  //   category: "Low Pressure",
-  //   status: "Resolved",
-  // },
-  // {
-  //   id: 4,
-  //   mesin: "Mesin Packaging 04",
-  //   time: "2025-09-12 09:22:45",
-  //   category: "Door Open",
-  //   status: "Active",
-  // },
-  // {
-  //   id: 5,
-  //   mesin: "Mesin CNC 05",
-  //   time: "2025-09-12 09:30:18",
-  //   category: "Sensor Fault",
-  //   status: "Resolved",
-  // },
+  {
+    id: 1,
+    mesin: "Mesin Injection 01",
+    time: "2025-09-12 08:35:20",
+    category: "Overheat",
+    status: "Active",
+  },
+  {
+    id: 2,
+    mesin: "Mesin Press 02",
+    time: "2025-09-12 08:40:05",
+    category: "Emergency Stop",
+    status: "Acknowledged",
+  },
+  {
+    id: 3,
+    mesin: "Mesin Cutting 03",
+    time: "2025-09-12 09:10:12",
+    category: "Low Pressure",
+    status: "Resolved",
+  },
+  {
+    id: 4,
+    mesin: "Mesin Packaging 04",
+    time: "2025-09-12 09:22:45",
+    category: "Door Open",
+    status: "Active",
+  },
+  {
+    id: 5,
+    mesin: "Mesin CNC 05",
+    time: "2025-09-12 09:30:18",
+    category: "Sensor Fault",
+    status: "Resolved",
+  },
 ];
 
 export default function AlarmLog() {
@@ -108,7 +108,7 @@ export default function AlarmLog() {
 
           {/* Table Body */}
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {tableData.length == 0 ? <TableRow>No Error Found</TableRow> : tableData.map((alarm) => (
+            {tableData.map((alarm) => (
               <TableRow key={alarm.id}>
                 <TableCell className="py-3 text-gray-800 text-theme-sm dark:text-white/90">
                   {alarm.mesin}

@@ -7,6 +7,7 @@ import Backdrop from "@/layout/Backdrop";
 import React from "react";
 import { DashboardDataProvider } from "@/context/DashboardDataContext";
 import { HistoryProvider } from "@/context/HistoryContext";
+import { StandardProvider } from "@/context/StandardContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
@@ -27,7 +28,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
           <AppHeader />
           <HistoryProvider>
-            <div className="p-4 mx-auto w-full md:p-6">{children}</div>
+            <StandardProvider>
+              <div className="p-4 mx-auto w-full md:p-6">{children}</div>
+            </StandardProvider>
           </HistoryProvider>
         </section>
       </main>

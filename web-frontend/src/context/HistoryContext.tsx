@@ -34,7 +34,7 @@ export const HistoryProvider: React.FC<HistoryProviderProps> = ({ children }) =>
       
       try {
         // Ganti dengan endpoint API Anda yang memberikan semua data (atau subset besar)
-        const res = await fetch(`${process.env.API_ENDPOINT}/history/1`, { cache: 'no-store' }); 
+        const res = await fetch(`/api/history/1`, { cache: 'no-store' }); 
         
         if (!res.ok) {
             throw new Error(`HTTP error! Status: ${res.status}`);

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic"; // Import dynamic
 import Button from "@/components/ui/button/Button";
-import AlarmLog from "@/components/dashboard/AlarmLog";
 import LineInfo from "@/components/dashboard/LineInfo";
 import { useProductionSettings } from "@/hooks/useProductionSettings";
 
@@ -163,7 +162,8 @@ export default function Dashboard() {
             </div>
 
             <div className="col-span-12 xl:col-span-12">
-                <AlarmLog />
+                {/* <AlarmLog /> */}
+                {/* Alarm Summary */}
             </div>
         </div>
     );
