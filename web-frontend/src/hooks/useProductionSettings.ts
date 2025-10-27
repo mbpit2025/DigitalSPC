@@ -27,7 +27,7 @@ const POLLING_INTERVAL = 10000; // Melakukan fetch ulang setiap 10 detik
  * * Data diproses untuk mendapatkan daftar Line Produksi (beserta targetnya) dan Model unik.
  * * @param apiUrl URL endpoint API (default: '/api/settings')
  */
-export function useProductionSettings(apiUrl: string = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/get_cell_information`) {
+export function useProductionSettings(apiUrl: string = `/api/pwi-api/line-data`) {
   const [data, setData] = useState<APISettingsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);

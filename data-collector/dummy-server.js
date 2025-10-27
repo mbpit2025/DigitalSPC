@@ -1,4 +1,13 @@
-const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL, GLOBAL_DEFAULT_RANGE } = require("./config");
+
+require("dotenv").config();
+const { DateTime } = require("luxon");
+const cron = require("node-cron");
+const {
+  PLCS,
+  DATA_POINTS_MAP,
+  POLLING_INTERVAL,
+  GLOBAL_DEFAULT_RANGE,
+} = require("./config");
 const { pushLatestData } = require("./websocket/ws-emitter");
 const {
   saveHistoricalData,
@@ -6,36 +15,45 @@ const {
   cleanDataOlderThanToday,
   processAndStoreHistory,
 } = require("./database/db-client");
+const {startAlarmChecker} = require("./alarm/alarm-checker")
 
-const { DateTime } = require("luxon");
-const cron = require("node-cron");
+// =====================================================
+// ⚙️ CONFIGURABLE SETTINGS via .env
+// =====================================================
+const ENABLE_POLLING = process.env.ENABLE_POLLING === "true";
+const ENABLE_SCHEDULER = process.env.ENABLE_SCHEDULER === "true";
 
-// Konstanta
+const START_HOUR = parseInt(process.env.START_HOUR || "7", 10);
+const START_MINUTE = parseInt(process.env.START_MINUTE || "0", 10);
+const END_HOUR = parseInt(process.env.END_HOUR || "23", 10);
+const END_MINUTE = parseInt(process.env.END_MINUTE || "50", 10);
+
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
-const CHECK_HISTORY_INTERVAL_MS = 15000;
+const CHECK_HISTORY_INTERVAL_MS = 2000;
 const HISTORY_WINDOW_MINUTES = 30;
 
-// Dummy Scheduler
-const START_HOUR = 7;
-const START_MINUTE = 0;
-const END_HOUR = 23;
-const END_MINUTE = 50;
-
-// Inisialisasi waktu pemrosesan ke kelipatan 10 menit terdekat
-let lastProcessedTime = DateTime.now()
-  .setZone(JAKARTA_TIMEZONE)
-  .startOf("minute")
-  .minus({ minutes: DateTime.now().minute % HISTORY_WINDOW_MINUTES });
-
+// =====================================================
+// 🕒 Log Info Jadwal Aktif
+// =====================================================
+console.log("=========================================");
+console.log("🕒 Configuration Summary");
+console.log(`- ENABLE_POLLING   : ${ENABLE_POLLING}`);
+console.log(`- ENABLE_SCHEDULER : ${ENABLE_SCHEDULER}`);
 console.log(
-  `[INIT] Waktu awal pemrosesan history: ${lastProcessedTime.toFormat(
-    "yyyy-MM-dd HH:mm:ss"
-  )} WIB`
+  `- START_TIME       : ${START_HOUR}:${START_MINUTE
+    .toString()
+    .padStart(2, "0")} WIB`
 );
+console.log(
+  `- END_TIME         : ${END_HOUR}:${END_MINUTE
+    .toString()
+    .padStart(2, "0")} WIB`
+);
+console.log("=========================================");
 
-// -------------------------------------------------------------
-// #1 Inisialisasi dan Pembersihan Harian
-// -------------------------------------------------------------
+// =====================================================
+// 🧹 #1 Inisialisasi & Pembersihan Harian
+// =====================================================
 async function initTableForToday() {
   try {
     const lastTimestamp = await getLastDataTimestamp();
@@ -45,21 +63,17 @@ async function initTableForToday() {
       return;
     }
 
-    const lastDate = DateTime.fromJSDate(lastTimestamp).setZone(
-      JAKARTA_TIMEZONE
-    );
+    const lastDate = DateTime.fromJSDate(lastTimestamp).setZone(JAKARTA_TIMEZONE);
     console.log(
       `[INIT INFO] Tanggal Terakhir: ${lastDate.toISODate()} | Hari Ini: ${today.toISODate()}`
     );
 
     if (!lastDate.hasSame(today, "day")) {
-      console.log(
-        `[INIT] Data terakhir (${lastDate.toISODate()}) bukan hari ini — membersihkan tabel...`
-      );
+      console.log(`[INIT] Data bukan hari ini — membersihkan tabel...`);
       const deleted = await cleanDataOlderThanToday();
       console.log(`[INIT CLEANUP] ${deleted} baris dihapus.`);
     } else {
-      console.log("[INIT] Data terakhir masih hari ini — tidak ada penghapusan.");
+      console.log("[INIT] Data masih hari ini — tidak ada penghapusan.");
     }
   } catch (err) {
     console.error("[INIT ERROR] Gagal saat inisialisasi tabel:", err);
@@ -79,9 +93,14 @@ function startDailyCleaner() {
   console.log("✅ CRON Pembersihan harian dijadwalkan pukul 00:01 WIB.");
 }
 
-// -------------------------------------------------------------
-// #2 Pemrosesan History Tiap 10 Menit
-// -------------------------------------------------------------
+// =====================================================
+// ⏳ #2 Pemrosesan History Tiap 10 Menit
+// =====================================================
+let lastProcessedTime = DateTime.now()
+  .setZone(JAKARTA_TIMEZONE)
+  .startOf("minute")
+  .minus({ minutes: DateTime.now().minute % HISTORY_WINDOW_MINUTES });
+
 async function historyProcessorLoop() {
   const currentTime = DateTime.now().setZone(JAKARTA_TIMEZONE);
   const nextTime = lastProcessedTime.plus({ minutes: HISTORY_WINDOW_MINUTES });
@@ -94,13 +113,14 @@ async function historyProcessorLoop() {
     );
 
     try {
-      const startTime = lastProcessedTime.toJSDate();
-      const endTime = nextTime.toJSDate();
-      const results = await processAndStoreHistory(startTime, endTime);
+      const results = await processAndStoreHistory(
+        lastProcessedTime.toJSDate(),
+        nextTime.toJSDate()
+      );
 
       if (results.processed > 0) {
         console.log(
-          `[HISTORY] ${results.processed} grup data dipindahkan setiap ${HISTORY_WINDOW_MINUTES} menit`
+          `[HISTORY] ${results.processed} grup data dipindahkan (${HISTORY_WINDOW_MINUTES} menit)`
         );
       } else {
         console.log("[HISTORY] Tidak ada data baru untuk diproses.");
@@ -115,82 +135,77 @@ async function historyProcessorLoop() {
   setTimeout(historyProcessorLoop, CHECK_HISTORY_INTERVAL_MS);
 }
 
-// -------------------------------------------------------------
-// #3 Dummy Data Generator
-// -------------------------------------------------------------
+// =====================================================
+// 🔄 #3 Dummy Data Generator
+// =====================================================
 function randomInRangeDecimal(min, max) {
-
-    const scaledMin = Math.ceil(min * 10);
-    const scaledMax = Math.floor(max * 10);
-
-    const randomNumberScaled = Math.floor(Math.random() * (scaledMax - scaledMin + 1)) + scaledMin;
-
-    // Bagi angka acak dengan 10 untuk mendapatkan 1 angka desimal
-    return randomNumberScaled / 10;
+  const scaledMin = Math.ceil(min * 10);
+  const scaledMax = Math.floor(max * 10);
+  const randomNumberScaled =
+    Math.floor(Math.random() * (scaledMax - scaledMin + 1)) + scaledMin;
+  return randomNumberScaled / 10;
 }
 
 function generateDummyData() {
-    const data = [];
-    const timestamp = DateTime.now().setZone(JAKARTA_TIMEZONE).toISO(); 
+  const data = [];
+  const timestamp = DateTime.now().setZone(JAKARTA_TIMEZONE).toISO();
 
-    PLCS.forEach((plc) => {
-        DATA_POINTS_MAP.forEach((point) => {
-            const tagName = point.tag_name;
-            let range = GLOBAL_DEFAULT_RANGE; // Mulai dengan rentang default global
+  PLCS.forEach((plc) => {
+    DATA_POINTS_MAP.forEach((point) => {
+      const tagName = point.tag_name;
+      let range = GLOBAL_DEFAULT_RANGE;
 
-            // 1. Cek apakah PLC ini memiliki konfigurasi tagRanges kustom
-            if (plc.tagRanges) {
-                let foundCustomRange = false;
-                
-                // 2. Iterasi melalui semua kunci di tagRanges (misalnya 'data1|data2|data3')
-                for (const key in plc.tagRanges) {
-                    // Jika kunci bukan 'default' dan nama tag cocok dengan pola kunci
-                    if (key !== 'default' && key.split('|').includes(tagName)) {
-                        range = plc.tagRanges[key];
-                        foundCustomRange = true;
-                        break; // Rentang ditemukan, keluar dari loop
-                    }
-                }
+      if (plc.tagRanges) {
+        let foundCustomRange = false;
 
-                // 3. Jika rentang kustom tag spesifik tidak ditemukan, gunakan 'default' dari PLC tersebut
-                if (!foundCustomRange && plc.tagRanges.default) {
-                    range = plc.tagRanges.default;
-                }
-            }
-            
-            // Terapkan rentang akhir
-            const min = range.min;
-            const max = range.max;
+        for (const key in plc.tagRanges) {
+          if (key !== "default" && key.split("|").includes(tagName)) {
+            range = plc.tagRanges[key];
+            foundCustomRange = true;
+            break;
+          }
+        }
 
-            data.push({
-                plc_id: plc.id,
-                plc_name: plc.name,
-                tag_name: tagName,
-                // Gunakan rentang yang telah ditentukan
-                value: randomInRangeDecimal(min, max), 
-                timestamp,
-            });
-        });
+        if (!foundCustomRange && plc.tagRanges.default) {
+          range = plc.tagRanges.default;
+        }
+      }
+
+      const { min, max } = range;
+
+      data.push({
+        plc_id: plc.id,
+        plc_name: plc.name,
+        tag_name: tagName,
+        value: randomInRangeDecimal(min, max),
+        timestamp,
+      });
     });
+  });
 
-    return data;
+  return data;
 }
 
 async function pollingLoop() {
+  if (!ENABLE_POLLING) {
+    console.log("⚠️ Polling dinonaktifkan (ENABLE_POLLING=false)");
+    return;
+  }
+
   const currentTime = DateTime.now().setZone(JAKARTA_TIMEZONE);
-  const endOfDay = currentTime.set({ 
-    hour: END_HOUR, 
-    minute: END_MINUTE, 
-    second: 0, 
-    millisecond: 0 
+  const endOfDay = currentTime.set({
+    hour: END_HOUR,
+    minute: END_MINUTE,
+    second: 0,
+    millisecond: 0,
   });
 
-    // Cek apakah sudah melewati batas akhir (18:00 WIB)
-  if (currentTime >= endOfDay) {
-    console.log(`[DUMMY STOP] 🛑 Waktu sudah ${END_HOUR}:${END_MINUTE} WIB. Menghentikan data generator.`);
-    // Menjadwalkan ulang untuk besok pagi pada 07:05 WIB
-    schedulePollingStart(true); 
-    return; // Keluar dari loop saat ini
+  if (ENABLE_SCHEDULER && currentTime >= endOfDay) {
+    console.log(
+      `[DUMMY STOP] 🛑 Sudah mencapai jam ${END_HOUR}:${END_MINUTE} WIB. Menghentikan generator.`
+    );
+    schedulePollingStart(true);
+    return;
   }
 
   const data = generateDummyData();
@@ -198,7 +213,7 @@ async function pollingLoop() {
 
   try {
     await saveHistoricalData(data);
-    console.log(`[DUMMY - Menyimpan setiap ${CHECK_HISTORY_INTERVAL_MS / 1000} detik]`)
+    console.log(`[DUMMY] Menyimpan setiap ${POLLING_INTERVAL / 1000}s`);
   } catch (err) {
     console.error("[DUMMY ERROR] Gagal menyimpan data:", err);
   }
@@ -206,77 +221,76 @@ async function pollingLoop() {
   setTimeout(pollingLoop, POLLING_INTERVAL);
 }
 
-/**
- * Menjadwalkan pollingLoop untuk mulai berjalan pada 07:05 WIB.
- * @param {boolean} isReschedule - True jika dipanggil dari pollingLoop (untuk hari berikutnya).
- */
 function schedulePollingStart(isReschedule = false) {
   const NOW = DateTime.now().setZone(JAKARTA_TIMEZONE);
-  
-  // Tentukan waktu target hari ini pada 07:05 WIB
-  let targetTime = NOW.set({ 
-    hour: START_HOUR, 
-    minute: START_MINUTE, 
-    second: 0, 
-    millisecond: 0 
+  let targetTime = NOW.set({
+    hour: START_HOUR,
+    minute: START_MINUTE,
+    second: 0,
+    millisecond: 0,
   });
 
-  // Jika sedang dijadwalkan ulang ATAU waktu target hari ini sudah terlewat, jadwalkan untuk besok.
-  // if (isReschedule || NOW >= targetTime) {
-  //   targetTime = targetTime.plus({ days: 1 });
-  //   const logPrefix = isReschedule ? "[RE-SCHEDULE]" : "[INIT]";
-  //   console.log(
-  //     `${logPrefix} Start Time: ${START_HOUR}:${START_MINUTE} WIB hari ini sudah terlewat. Menjadwalkan start besok pada ${targetTime.toFormat(
-  //       "yyyy-MM-dd HH:mm:ss"
-  //     )}.`
-  //   );
-  // } else {
-  //   console.log(
-  //     `[INIT] Menjadwalkan start pada ${targetTime.toFormat(
-  //       "yyyy-MM-dd HH:mm:ss"
-  //     )} WIB.`
-  //   );
-  // }
+  if (isReschedule || NOW >= targetTime) {
+    targetTime = targetTime.plus({ days: 1 });
+    console.log(
+      `[RE-SCHEDULE] Menjadwalkan start besok: ${targetTime.toFormat(
+        "yyyy-MM-dd HH:mm:ss"
+      )} WIB`
+    );
+  } else {
+    console.log(
+      `[INIT] Menjadwalkan start pada ${targetTime.toFormat(
+        "yyyy-MM-dd HH:mm:ss"
+      )} WIB`
+    );
+  }
 
-  // Hitung waktu tunggu dalam milidetik
   const delayMs = targetTime.diff(NOW).toMillis();
 
   if (delayMs > 0) {
     console.log(
-      `[INIT] Dummy Data Generator akan mulai dalam ${Math.ceil(
+      `[TIMER] Dummy Data Generator akan mulai dalam ${Math.ceil(
         delayMs / 60000
-      )} menit...`
+      )} menit`
     );
-
     setTimeout(() => {
       console.log(
-        `\n[TIMER START] ⏱️ Waktu ${START_HOUR}:${START_MINUTE} WIB tercapai, memulai Dummy Data Generator.`
+        `\n[START] ⏱️ ${START_HOUR}:${START_MINUTE} WIB — Dummy Generator dimulai.`
       );
-      pollingLoop(); // Mulai loop polling data
+      pollingLoop();
     }, delayMs);
-  } else {
-    // Jika start time di masa lalu/sekarang, dan ini BUKAN re-schedule (berarti server baru start)
-    if (!isReschedule) {
-        console.log(`[INIT] Memulai pollingLoop segera (Start time sudah lewat).`);
-        pollingLoop();
-    }
+  } else if (!isReschedule) {
+    console.log(`[INIT] Start time sudah lewat, mulai segera.`);
+    pollingLoop();
   }
 }
 
+// =====================================================
+// 🟢 #4 Entry Point
+// =====================================================
 async function startDummyCollector() {
   console.log("=========================================");
   console.log("🚀 Dummy Collector & History Processor started.");
 
   await initTableForToday();
   startDailyCleaner();
-  
-  // 1. Ganti pemanggilan pollingLoop() langsung dengan penjadwalan
-  schedulePollingStart(); 
-  
+
+  if (ENABLE_POLLING) {
+    if (ENABLE_SCHEDULER) {
+      console.log("✅ Scheduler aktif — mengikuti jadwal dari .env");
+      schedulePollingStart();
+    } else {
+      console.log("🟢 Scheduler nonaktif — polling langsung berjalan.");
+      pollingLoop();
+    }
+  } else {
+    console.log("⏸️ Polling dummy dimatikan (ENABLE_POLLING=false)");
+  }
+
   historyProcessorLoop();
+  startAlarmChecker()
 
   console.log("=========================================");
 }
-
 
 startDummyCollector();

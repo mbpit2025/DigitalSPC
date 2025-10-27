@@ -51,7 +51,7 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
       const res = await fetch(API_ENDPOINT, {
         cache: "no-store",
       });
-      if (!res.ok) throw new Error(`Gagal mengambil data dari API (${res.status})`);
+      // if (!res.ok) throw new Error(`Gagal mengambil data dari API (${res.status})`);
       const json = await res.json();
 
       const dataArray: DataPoint[] = Array.isArray(json)
@@ -102,6 +102,8 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
   const overallStatus = isHotNormal ? "NORMAL" : "ABNORMAL";
   const badgeColor = overallStatus === "NORMAL" ? "success" : "error";
 
+  console.log(error)
+
   return (
     <div className="flex w-full gap-6 flex-col col-span-4 md:col-span-2 lg:col-span-1 h-full">
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] flex flex-col justify-between">
@@ -114,9 +116,7 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
           </h3>
         </div>
 
-        {error ? (
-          <p className="text-red-500 mt-4 text-sm">{error}</p>
-        ) : isLoading ? (
+        { isLoading ? (
           <p className="text-gray-400 mt-4">Loading data...</p>
         ) : (
           <div className="flex flex-wrap items-end justify-between mt-5 md:px-2">

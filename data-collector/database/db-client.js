@@ -135,9 +135,20 @@ async function processAndStoreHistory(startTime, endTime) {
   }
 }
 
+async function dbQuery(sql, params = []) {
+  try {
+    const [rows] = await pool.query(sql, params);
+    return rows;
+  } catch (err) {
+    console.error("[DB ERROR] Query gagal:", err);
+    throw err;
+  }
+}
+
 module.exports = {
   saveHistoricalData,
   getLastDataTimestamp,
   cleanDataOlderThanToday,
   processAndStoreHistory,
+  dbQuery
 };

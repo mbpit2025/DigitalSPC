@@ -18,34 +18,34 @@ interface DashboardDataContextProps {
 
 const DashboardDataContext = createContext<DashboardDataContextProps | null>(null);
 
-const REFRESH_INTERVAL = 3; // detik
+const REFRESH_INTERVAL = 2; // detik
 
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<DataPoint[]>([]);
   const [counter, setCounter] = useState(REFRESH_INTERVAL);
 
   // Validasi data baru (diekstrak di luar useCallback karena tidak ada dependensi state/props)
-  const isDataValid = (latestData: DataPoint[]) => {
-    if (!Array.isArray(latestData) || latestData.length === 0) return false;
+  const isDataValid = (latestdata: DataPoint[]) => {
+    if (!Array.isArray(latestdata) || latestdata.length === 0) return false;
     // Jika semua value = 0 → tidak valid
-    const allZero = latestData.every((dp) => dp.value === 0);
+    const allZero = latestdata.every((dp) => dp.value === 0);
     return !allZero;
   };
 
   // PERBAIKAN: Gunakan useCallback untuk memastikan fetchData stabil.
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(`/api/log`, {
+      const res = await fetch(`/api/realtime`, {
         cache: "no-store",
       });
 
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
 
       const result = await res.json();
-      const latestData: DataPoint[] = Array.isArray(result.latestData) ? result.latestData : [];
-
-      if (isDataValid(latestData)) {
-        setData(latestData); // update state hanya jika data valid
+      const latestdata: DataPoint[] = Array.isArray(result.latestData) ? result.latestData : [];
+        // console.log(latestdata)
+      if (isDataValid(latestdata)) {
+        setData(latestdata); // update state hanya jika data valid
       } else {
         console.warn("Data baru tidak valid atau semua 0, tetap pakai data lama.");
       }

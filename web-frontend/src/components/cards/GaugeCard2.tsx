@@ -52,7 +52,7 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
       const res = await fetch(`${process.env.NEXT_PUBLIC_LOCAL_API_BASE_URL}/api/pwi-api/mc-data`, {
         cache: "no-store",
       });
-      if (!res.ok) throw new Error("Gagal mengambil data dari API");
+      // if (!res.ok) throw new Error("Gagal mengambil data dari API");
       const json = await res.json();
 
       const dataArray: DataPoint[] = Array.isArray(json)
@@ -97,6 +97,7 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
 
   const overallStatus = isHotNormal ? "NORMAL" : "ABNORMAL";
   const badgeColor = overallStatus === "NORMAL" ? "success" : "error";
+  console.log(error)
 
   return (
     <div className="flex w-full gap-6 flex-col col-span-4 md:col-span-2 lg:col-span-1 h-full">
@@ -112,7 +113,7 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
         </div>
 
         {/* Error Message */}
-        {error && <p className="text-red-600 text-sm mt-2">Error: {error}</p>}
+        {/* {error && <p className="text-red-600 text-sm mt-2">Error: {error}</p>} */}
 
         {/* Data Display */}
         <div className="flex flex-wrap gap-4 items-end justify-between mt-5 md:px-2">
