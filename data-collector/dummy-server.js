@@ -29,7 +29,6 @@ const END_HOUR = parseInt(process.env.END_HOUR || "23", 10);
 const END_MINUTE = parseInt(process.env.END_MINUTE || "50", 10);
 
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
-const CHECK_HISTORY_INTERVAL_MS = 2000;
 const HISTORY_WINDOW_MINUTES = 30;
 
 // =====================================================
@@ -132,7 +131,7 @@ async function historyProcessorLoop() {
     }
   }
 
-  setTimeout(historyProcessorLoop, CHECK_HISTORY_INTERVAL_MS);
+  setTimeout(historyProcessorLoop, POLLING_INTERVAL);
 }
 
 // =====================================================

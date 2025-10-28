@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"; // Import dynamic
 import Button from "@/components/ui/button/Button";
 import LineInfo from "@/components/dashboard/LineInfo";
 import { useProductionSettings } from "@/hooks/useProductionSettings";
+import AlarmSections from "@/components/dashboard/AlarmSection";
 
 // ----------------------------------------------------
 // 1. Dynamic Imports untuk Komponen yang Berbasis Browser (Charts & Cards)
@@ -162,8 +163,9 @@ export default function Dashboard() {
             </div>
 
             <div className="col-span-12 xl:col-span-12">
-                {/* <AlarmLog /> */}
-                {/* Alarm Summary */}
+                <div className="col-span-6">
+                    <AlarmSections />
+                </div>
             </div>
         </div>
     );

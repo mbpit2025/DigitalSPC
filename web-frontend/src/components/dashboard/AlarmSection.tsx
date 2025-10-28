@@ -25,7 +25,7 @@ type AlarmApiResponse = {
   data: AlarmItem[];
 };
 
-export default function AlarmPage() {
+export default function AlarmSections() {
   const [alarms, setAlarms] = useState<AlarmItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,9 +67,13 @@ export default function AlarmPage() {
       {loading ? (
         <div className="text-center text-gray-300">Loading alarm data...</div>
       ) : (
-        <div className="">
-          <AlarmLogChart alarms={alarms} />
-          <AlarmLog alarms={alarms} />
+        <div className="grid grid-cols-6 gap-4">
+            <div className="col-span-6 xl:col-span-3">
+              <AlarmLogChart alarms={alarms} />
+            </div>
+            <div className="col-span-6 xl:col-span-3">
+              <AlarmLog alarms={alarms} />
+            </div>
         </div>
       )}
     </section>

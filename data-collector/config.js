@@ -25,7 +25,7 @@ const PLCS = [
     },
     { id: "3", name: 'CHILLER_LINE_1', ip: '10.2.13.76', port: 502, unitId: 1,
         tagRanges: {
-          'default': { min: 26, max: 30 }
+          'default': { min: 26, max: 35 }
       }
     },
     { id: "4", name: 'BPM_LINE_2', ip: '10.2.13.77', port: 502, unitId: 2,
@@ -69,7 +69,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 
 // Interval Polling (dalam milidetik)
-const POLLING_INTERVAL = 5000; // 5 detik
+const POLLING_INTERVAL = 20000; // 5 detik
 
 module.exports = {
     PLCS,

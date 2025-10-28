@@ -16,20 +16,20 @@ interface ResponseData {
 const responseData: ResponseData = {
   "B1-01": {
     "model": [
-      // "ML515",
-      // "ML574",
-      // "U574",
+      "ML515",
+      "ML574",
+      "U574",
       "WL574"
     ],
     "target": "168"
   },
   "B1-02": {
     "model": [
-      // "ME420",
-      // "ML610",
+      "ME420",
+      "ML610",
       "U204",
-      // "WE420",
-      // "WL996"
+      "WE420",
+      "WL996"
     ],
     "target": "169"
   }

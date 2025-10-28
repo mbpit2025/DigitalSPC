@@ -36,7 +36,7 @@ export default function SettingIndexPage() {
   // 🧠 Fungsi: Validasi input
   // ============================================================
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    let value: string = e.target.value.toUpperCase();
+    const value: string = e.target.value.toUpperCase();
 
     if (value === '' || VALID_CHARS_REGEX.test(value)) {
       setNewModelName(value);
@@ -291,7 +291,7 @@ export default function SettingIndexPage() {
                 </Button>
                 <Button
                   variant="primary"
-                  onClick={()=>{handleCreateModel}}
+                  type="submit"
                   disabled={!isFormValid || isSubmitting}
                 >
                   {isSubmitting ? 'Memproses...' : 'Simpan Model'}

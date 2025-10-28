@@ -1,7 +1,7 @@
 import React, { ReactNode } from "react";
 
-interface ButtonProps {
-  children: ReactNode; // Button text or content
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>  {
+  children: React.ReactNode;
   size?: "sm" | "md" | "xs"; // Button size
   variant?: "primary" | "outline"; // Button variant
   startIcon?: ReactNode; // Icon before the text
