@@ -8,11 +8,11 @@ import {
 } from "chart.js";
 import "chartjs-adapter-date-fns";
 import Button from "@/components/ui/button/Button";
-import STANDARDS from "@/data/standards.json";
-import { MachineStandardLimits, CardProps } from "@/types/production-standards";
+import { CardProps } from "@/types/production-standards";
 import { getRealtimeChartOptions } from "@/config/chartOptions";
 import "@/config/chartSetup";
 import { LineAnnotation } from "@/types/chartjs";
+import { useDashboardData } from "@/context/DashboardDataContext";
 
 interface CellConfig {
     plcId: string;
@@ -27,8 +27,6 @@ const CELL_MAP: { [key: string]: CellConfig } = {
         plcId: "5", upper: "data4", outsole: "data5",
     },
 };
-
-const STANDARDS_BY_MODEL: { [key: string]: MachineStandardLimits } = STANDARDS;
 
 type RealtimeChartProps = CardProps; 
 interface ApiDataItem { tag_name: string; value: number; timestamp: string; }
@@ -120,7 +118,19 @@ export const ChartPrimer1 = ({ selectedCell, selectedModel, title }: RealtimeCha
     const [startTime, setStartTime] = useState<string>(''); 
     const [endTime, setEndTime] = useState<string>('');   
     const chartRef = useRef<ChartJS<'line', ChartPoint[], 'time'> | null>(null);
-    const config = useMemo(() => CELL_MAP[selectedCell], [selectedCell]);
+    const {standardData} = useDashboardData()
+
+    const config = CELL_MAP[selectedCell];
+    if (!config) {
+        return (
+        <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <p className="text-gray-600 dark:text-gray-400">
+            Invalid cell selection: {selectedCell}
+            </p>
+        </div>
+        );
+    }
+
 
     const tagsToDisplay = useMemo(() => {
         if (!config) return [];
@@ -136,14 +146,10 @@ export const ChartPrimer1 = ({ selectedCell, selectedModel, title }: RealtimeCha
         return null;
     }, [startTime, endTime]);
 
-    const standards = useMemo(
-        () =>
-        selectedModel
-            ? STANDARDS_BY_MODEL[selectedModel] ||
-            STANDARDS_BY_MODEL["DEFAULT"]
-            : STANDARDS_BY_MODEL["DEFAULT"],
-        [selectedModel]
-    );
+
+  const standards =
+    (selectedModel && standardData[selectedModel]) ||
+    standardData["DEFAULT"];
 
     const createLineAnnotation = useCallback((
         yValue: number,

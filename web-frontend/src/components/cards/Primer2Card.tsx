@@ -6,8 +6,7 @@ import { GroupIcon,
    ArrowUpIcon
    } from "@/icons";
 import { UptimeBar } from "../dashboard/Uptime";
-import STANDARDS from "@/data/standards.json";
-import { MachineStandardLimits, CardProps,DataPoint } from "@/types/production-standards";
+import { CardProps,DataPoint } from "@/types/production-standards";
 
 
 const DATA_MAP = {
@@ -23,16 +22,24 @@ const DATA_MAP = {
     },
 };
 
-const STANDARDS_BY_MODEL: { [key: string]: MachineStandardLimits } = STANDARDS;
 
 export const Primer2Card = ({selectedCell, selectedModel} : CardProps) => {
-  const { data } = useDashboardData();
+  const { data, standardData } = useDashboardData();
 
   const config = DATA_MAP[selectedCell];
-
-   const standards = selectedModel 
-  ? STANDARDS_BY_MODEL[selectedModel] || STANDARDS_BY_MODEL["DEFAULT"] 
-  : STANDARDS_BY_MODEL["DEFAULT"];
+  if (!config) {
+    return (
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <p className="text-gray-600 dark:text-gray-400">
+          Invalid cell selection: {selectedCell}
+        </p>
+      </div>
+    );
+  }
+  
+  const standards =
+    (selectedModel && standardData[selectedModel]) ||
+    standardData["DEFAULT"];
   
   const { PM2_OT_TEMP_MIN, PM2_OT_TEMP_MAX, PM2_UP_TEMP_MIN, PM2_UP_TEMP_MAX } = standards;
   

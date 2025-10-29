@@ -1,91 +1,118 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react"; // Import useCallback
-
-interface DataPoint {
-  plc_id: string;
-  plc_name: string;
-  tag_name: string;
-  value: number;
-  timestamp: string;
-}
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
+import { MachineStandardLimits, DataPoint } from "@/types/production-standards";
 
 interface DashboardDataContextProps {
-  data: DataPoint[];
-  counter: number;
-  refresh: () => void;
+  data: DataPoint[];
+  counter: number;
+  standardData: Record<string, MachineStandardLimits>;
+  refresh: () => void;
 }
 
-const DashboardDataContext = createContext<DashboardDataContextProps | null>(null);
+const DashboardDataContext =
+  createContext<DashboardDataContextProps | null>(null);
 
-const REFRESH_INTERVAL = 2; // detik
+const REFRESH_INTERVAL = 10;
 
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
-  const [data, setData] = useState<DataPoint[]>([]);
-  const [counter, setCounter] = useState(REFRESH_INTERVAL);
+  const [data, setData] = useState<DataPoint[]>([]);
+  const [counter, setCounter] = useState(REFRESH_INTERVAL);
 
-  // Validasi data baru (diekstrak di luar useCallback karena tidak ada dependensi state/props)
-  const isDataValid = (latestdata: DataPoint[]) => {
-    if (!Array.isArray(latestdata) || latestdata.length === 0) return false;
-    // Jika semua value = 0 → tidak valid
-    const allZero = latestdata.every((dp) => dp.value === 0);
-    return !allZero;
-  };
+  // ✅ FIX: gunakan Record<string, MachineStandardLimits>
+  const [standardData, setStandardData] = useState<Record<string, MachineStandardLimits>>({});
 
-  // PERBAIKAN: Gunakan useCallback untuk memastikan fetchData stabil.
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/realtime`, {
-        cache: "no-store",
-      });
+  const isDataValid = (latestdata: DataPoint[]) => {
+    if (!Array.isArray(latestdata) || latestdata.length === 0) return false;
+    const allZero = latestdata.every((dp) => dp.value === 0);
+    return !allZero;
+  };
 
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/realtime`, { cache: "no-store" });
 
-      const result = await res.json();
-      const latestdata: DataPoint[] = Array.isArray(result.latestData) ? result.latestData : [];
-        // console.log(latestdata)
-      if (isDataValid(latestdata)) {
-        setData(latestdata); // update state hanya jika data valid
-      } else {
-        console.warn("Data baru tidak valid atau semua 0, tetap pakai data lama.");
-      }
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
 
-    } catch (err) {
-      console.error("Fetch error, gunakan data lama:", err);
-      // Tetap pakai data lama
-    } finally {
-      setCounter(REFRESH_INTERVAL);
-    }
-  }, []); // Dependency array kosong karena fetchData tidak bergantung pada state/props apa pun saat ini
+      const result = await res.json();
+      const latestdata: DataPoint[] = Array.isArray(result.latestData) ? result.latestData : [];
 
-  useEffect(() => {
-    // Panggil pertama kali
-    fetchData();
+      if (isDataValid(latestdata)) {
+        setData(latestdata);
+      } else {
+        console.warn("Data baru tidak valid atau semua 0, tetap pakai data lama.");
+      }
+    } catch (err) {
+      console.error("Fetch error, gunakan data lama:", err);
+    } finally {
+      setCounter(REFRESH_INTERVAL);
+    }
+  }, []);
 
-    const tick = setInterval(() => {
-      setCounter((prev) => {
-        if (prev <= 1) {
-          // Panggil fetchData melalui fungsi callback yang stabil
-          fetchData();
-          return REFRESH_INTERVAL;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  const fetchStandards = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/standards`);
+      if (!res.ok) throw new Error("Failed to fetch standard data");
 
-    // fetchData harus dimasukkan karena React memerlukannya (walaupun sudah stabil)
-    return () => clearInterval(tick);
-  }, [fetchData]); // PERBAIKAN: fetchData sekarang ada di dependency array
+      // ✅ JSON return harus berupa object (bukan array)
+      const standards: Record<string, MachineStandardLimits> = await res.json();
+      setStandardData(standards);
+    } catch (err: unknown) {
+      console.error("Error fetching standard data:", (err as Error).message);
+      setStandardData({});
+    }
+  }, []);
 
-  return (
-    <DashboardDataContext.Provider value={{ data, counter, refresh: fetchData }}>
-      {children}
-    </DashboardDataContext.Provider>
-  );
+  const refresh = useCallback(() => {
+    fetchData();
+    setCounter(REFRESH_INTERVAL);
+  }, [fetchData]);
+
+  // Auto refresh + countdown
+  useEffect(() => {
+    fetchData();
+    fetchStandards();
+
+    const tick = setInterval(() => {
+      setCounter((prev) => {
+        if (prev <= 1) {
+          fetchData();
+          return REFRESH_INTERVAL;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(tick);
+  }, [fetchData, fetchStandards]);
+
+  // Refresh when tab becomes active
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        fetchData();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [fetchData]);
+
+  return (
+    <DashboardDataContext.Provider value={{ data, counter, standardData, refresh }}>
+      {children}
+    </DashboardDataContext.Provider>
+  );
 }
 
 export function useDashboardData() {
-  const ctx = useContext(DashboardDataContext);
-  if (!ctx) throw new Error("useDashboardData must be used within DashboardDataProvider");
-  return ctx;
+  const ctx = useContext(DashboardDataContext);
+  if (!ctx)
+    throw new Error("useDashboardData must be used within DashboardDataProvider");
+  return ctx;
 }

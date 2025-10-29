@@ -9,11 +9,11 @@ import {
 } from "chart.js";
 import "chartjs-adapter-date-fns";
 import Button from "@/components/ui/button/Button";
-import STANDARDS from "@/data/standards.json";
-import { MachineStandardLimits, CardProps } from "@/types/production-standards";
+import { CardProps } from "@/types/production-standards";
 import { getRealtimeChartOptions } from "@/config/chartOptions";
 import "@/config/chartSetup";
 import { LineAnnotation } from "@/types/chartjs";
+import { useDashboardData } from "@/context/DashboardDataContext";
 
 
 interface CellConfig {
@@ -32,8 +32,6 @@ const CELL_MAP: { [key: string]: CellConfig } = {
         Cold1: "data4", Cold2: "data5", Cold3: "data6", Cold4: "data7",
     },
 };
-
-const STANDARDS_BY_MODEL: { [key: string]: MachineStandardLimits } = STANDARDS;
 
 
 interface ApiDataItem { tag_name: string; value: number; timestamp: string; }
@@ -114,46 +112,44 @@ const processData = (
 
   return newDataHistory;
 };
-
 export const ChartBPM = ({ selectedCell, selectedModel, title }: CardProps) => {
-    const [dataHistory, setDataHistory] = useState<DataHistory>({}); 
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-    const [startTime, setStartTime] = useState<string>(''); 
-    const [endTime, setEndTime] = useState<string>('');   
-    const chartRef = useRef<ChartJS<'line', ChartPoint[], 'time'> | null>(null);
-    const config = useMemo(() => CELL_MAP[selectedCell], [selectedCell]);
+  const [dataHistory, setDataHistory] = useState<DataHistory>({});
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const chartRef = useRef<ChartJS<'line', ChartPoint[], 'time'> | null>(null);
+  const { standardData } = useDashboardData();
 
-        
-    const tagsToDisplay = useMemo(() => {
-        if (!config) return [];
-        return [
-            config.hot1, config.hot2, config.hot3, config.hot4, 
-            config.Cold1, config.Cold2, config.Cold3, config.Cold4
-        ];
-    }, [config]);
-    
-    const filterRange = useMemo(() => {
-        if (startTime && endTime && startTime.match(/^\d{2}:\d{2}$/) && endTime.match(/^\d{2}:\d{2}$/) && startTime <= endTime) {
-            return { start: startTime, end: endTime };
-        }
-        return null;
-    }, [startTime, endTime]);
+  const config = CELL_MAP[selectedCell];
 
-    const standards = useMemo(() => 
-        selectedModel 
-            ? STANDARDS_BY_MODEL[selectedModel] || STANDARDS_BY_MODEL["DEFAULT"] 
-            : STANDARDS_BY_MODEL["DEFAULT"]
-    , [selectedModel]);
+  // ✅ now hooks are always called
+  const tagsToDisplay = useMemo(() => {
+    if (!config) return [];
+    return [
+      config.hot1, config.hot2, config.hot3, config.hot4,
+      config.Cold1, config.Cold2, config.Cold3, config.Cold4
+    ];
+  }, [config]);
 
+  const filterRange = useMemo(() => {
+    if (startTime && endTime && startTime.match(/^\d{2}:\d{2}$/) && endTime.match(/^\d{2}:\d{2}$/) && startTime <= endTime) {
+      return { start: startTime, end: endTime };
+    }
+    return null;
+  }, [startTime, endTime]);
 
-    const createLineAnnotation = useCallback((
+  const standards =
+    (selectedModel && standardData[selectedModel]) ||
+    standardData["DEFAULT"];
+
+  const createLineAnnotation = useCallback((
     yValue: number,
     label: string,
     color: string,
     position: 'start' | 'end',
     type: 'MAX' | 'MIN'
-    ): LineAnnotation => ({
+  ): LineAnnotation => ({
     type: 'line',
     yMin: yValue,
     yMax: yValue,
@@ -161,65 +157,72 @@ export const ChartBPM = ({ selectedCell, selectedModel, title }: CardProps) => {
     borderWidth: 2,
     borderDash: [6, 6],
     label: {
-        content: `${label} ${type} (${yValue} °C)`,
-        position,
-        backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.7)'),
-        color: 'white',
-        font: { weight: 'bold' },
+      content: `${label} ${type} (${yValue} °C)`,
+      position,
+      backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.7)'),
+      color: 'white',
+      font: { weight: 'bold' },
     },
-    }), []); 
+  }), []);
 
-    const createAnnotations = useCallback((): Record<string, LineAnnotation> => {
-            const annotations: Record<string, LineAnnotation> = {};
-            if (!standards) return annotations;
-            
-            const hotColor = 'rgb(255, 0, 0)'; 
-            annotations['hotMax'] = createLineAnnotation(standards.HOT_TEMP_MAX, 'Heating Standard', hotColor, 'end', 'MAX');
-            annotations['hotMin'] = createLineAnnotation(standards.HOT_TEMP_MIN, 'Heating Standard', hotColor, 'start', 'MIN');
-            
-            const coldColor = 'rgb(0, 0, 255)'; 
-            annotations['coldMax'] = createLineAnnotation(standards.COLD_TEMP_MAX, 'Molding Standard', coldColor, 'end', 'MAX');
-            annotations['coldMin'] = createLineAnnotation(standards.COLD_TEMP_MIN, 'Molding Standard', coldColor, 'start', 'MIN');
+  const createAnnotations = useCallback((): Record<string, LineAnnotation> => {
+    const annotations: Record<string, LineAnnotation> = {};
+    if (!standards) return annotations;
 
-            return annotations;
-        }, [standards, createLineAnnotation]);
-    
-   useEffect(() => {
-        if (!config) {
-             setError(`Konfigurasi untuk cell ${selectedCell} tidak ditemukan.`);
-             setLoading(false);
-             return;
-        }
+    const hotColor = 'rgb(255, 0, 0)';
+    annotations['hotMax'] = createLineAnnotation(standards.HOT_TEMP_MAX, 'Heating Standard', hotColor, 'end', 'MAX');
+    annotations['hotMin'] = createLineAnnotation(standards.HOT_TEMP_MIN, 'Heating Standard', hotColor, 'start', 'MIN');
 
-        const pollApi = async () => {
-            try {
-                const apiResponse = await fetchData(config.plcId);
-                setDataHistory(prevDataHistory => processData(apiResponse, prevDataHistory, tagsToDisplay, filterRange));
-                setLoading(false);
-            } catch (err: unknown) { 
-                const errorMessage = (err instanceof Error) ? err.message : "Terjadi kesalahan yang tidak diketahui.";
-                console.error("Error fetching data:", err);
-                setError(errorMessage);
-                setLoading(false);
-            }
-        };
+    const coldColor = 'rgb(0, 0, 255)';
+    annotations['coldMax'] = createLineAnnotation(standards.COLD_TEMP_MAX, 'Molding Standard', coldColor, 'end', 'MAX');
+    annotations['coldMin'] = createLineAnnotation(standards.COLD_TEMP_MIN, 'Molding Standard', coldColor, 'start', 'MIN');
 
-        setDataHistory({});
-        setError(null);
-        setLoading(true);
+    return annotations;
+  }, [standards, createLineAnnotation]);
 
-        pollApi(); 
-        
-        let intervalId: NodeJS.Timeout | null = null;
-        
-        if (!filterRange) {
-             intervalId = setInterval(pollApi, POLLING_INTERVAL);
-        }
+  useEffect(() => {
+    if (!config) {
+      setError(`Konfigurasi untuk cell ${selectedCell} tidak ditemukan.`);
+      setLoading(false);
+      return;
+    }
 
-        return () => {
-            if (intervalId) clearInterval(intervalId);
-        };
-    }, [selectedCell, config, tagsToDisplay, filterRange]);
+    const pollApi = async () => {
+      try {
+        const apiResponse = await fetchData(config.plcId);
+        setDataHistory(prev => processData(apiResponse, prev, tagsToDisplay, filterRange));
+        setLoading(false);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Terjadi kesalahan yang tidak diketahui.";
+        setError(msg);
+        setLoading(false);
+      }
+    };
+
+    setDataHistory({});
+    setError(null);
+    setLoading(true);
+
+    pollApi();
+
+    let intervalId: NodeJS.Timeout | null = null;
+    if (!filterRange) intervalId = setInterval(pollApi, POLLING_INTERVAL);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [selectedCell, config, tagsToDisplay, filterRange]);
+
+  // ✅ AFTER hooks — now we check invalid config
+  if (!config) {
+    return (
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <p className="text-gray-600 dark:text-gray-400">
+          Invalid cell selection: {selectedCell}
+        </p>
+      </div>
+    );
+  }
 
     // --- FUNGSI EKSPOR ---
     const exportChartAsImage = (format: 'png' | 'jpeg') => { 
@@ -282,10 +285,10 @@ export const ChartBPM = ({ selectedCell, selectedModel, title }: CardProps) => {
     return getRealtimeChartOptions(dynamicTitle, annotationLines);
     }, [title, selectedCell, selectedModel, createAnnotations]);
 
-    if (error) return <p style={{ color: 'red', padding: '20px' }}>Error: {error}</p>;
-
-    const hasData = Object.values(dataHistory).some(arr => arr.length > 0);
-    
+if (error) {
+  return <p style={{ color: 'red', padding: '20px' }}>Error: {error}</p>;
+}
+  const hasData = Object.values(dataHistory).some(arr => arr.length > 0);
     return (
         <div className='rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] flex flex-col justify-between col-span-12 lg:col-span-4 ' >
             <div style={{ display: 'flex', gap:"10px", justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }} className='flex-wrap'>

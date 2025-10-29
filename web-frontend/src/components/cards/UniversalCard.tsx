@@ -1,12 +1,10 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import Badge from "../ui/badge/Badge";
-import { GroupIcon, 
-  ArrowUpIcon
- } from "@/icons";
+import { GroupIcon, ArrowUpIcon } from "@/icons";
 import { UptimeBar } from "../dashboard/Uptime";
-import STANDARDS from "@/data/standards.json";
 import { MachineStandardLimits, CardProps } from "@/types/production-standards";
+import { useDashboardData } from "@/context/DashboardDataContext";
 
 interface DataPoint {
   plc_id: number;
@@ -17,7 +15,6 @@ interface DataPoint {
   count: number;
 }
 
-// 🗺️ Map PLC dan tag yang digunakan
 const DATA_MAP = {
   "B1-01": {
     plc_name: "UNIVERSAL PRESS_B1-01 RIGHT",
@@ -31,78 +28,65 @@ const DATA_MAP = {
   },
 };
 
-const STANDARDS_BY_MODEL: Record<string, MachineStandardLimits> = STANDARDS as Record<
-  string,
-  MachineStandardLimits
->;
-
 export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
   const [dataPwi, setDataPwi] = useState<DataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { standardData } = useDashboardData();
 
+  // ✅ Hooks dulu, jangan return dulu
   const config = DATA_MAP[selectedCell];
-  const selectedPlcIds = [config.plc_name];
+  const selectedPlcIds = config ? [config.plc_name] : [];
   const API_ENDPOINT = `http://10.2.11.4:6060/api/get_pressure_data`;
 
-  // 🔁 Fungsi fetch API — dibuat useCallback agar tidak bikin interval ganda
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch(API_ENDPOINT, {
-        cache: "no-store",
-      });
-      // if (!res.ok) throw new Error(`Gagal mengambil data dari API (${res.status})`);
+      const res = await fetch(API_ENDPOINT, { cache: "no-store" });
       const json = await res.json();
-
-      const dataArray: DataPoint[] = Array.isArray(json)
-        ? json
-        : json.data || [];
+      const dataArray: DataPoint[] = Array.isArray(json) ? json : json.data || [];
 
       setDataPwi(dataArray);
       setIsLoading(false);
-      setError(null);
-    } catch (error: unknown) {
-      console.error("Fetch error:", error);
-      setError("Terjadi kesalahan saat mengambil data");
+    } catch (err) {
+      console.error("Fetch error:", err);
       setIsLoading(false);
     }
-  }, [API_ENDPOINT]);
+  }, []);
 
-  // 🕒 Jalankan pertama kali + interval tiap 10 detik
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000); // 30 detik
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // ✅ Filter data sesuai PLC
+  // ✅ Standar tetap aman meski config salah
+  const standards: MachineStandardLimits =
+    (selectedModel && standardData[selectedModel]) || standardData["DEFAULT"];
+
+  const { UP_PRESSURE_MIN = 0, UP_PRESSURE_MAX = 100 } = standards;
+
   const filteredData = dataPwi.filter((item) =>
     selectedPlcIds.includes(item.plc_name)
   );
-
-  // Ambil nilai dari data yang difilter
   const pressureValue = filteredData[0]?.pressure ?? "0.00";
-
-  // ✅ Ambil standard berdasarkan model
-  const standards =
-    selectedModel && STANDARDS_BY_MODEL[selectedModel]
-      ? STANDARDS_BY_MODEL[selectedModel]
-      : STANDARDS_BY_MODEL["DEFAULT"];
-
-  const {
-    UP_PRESSURE_MIN = 0,
-    UP_PRESSURE_MAX = 100,
-  } = standards;
 
   const isHotNormal =
     !isNaN(Number(pressureValue)) &&
     Number(pressureValue) >= UP_PRESSURE_MIN &&
     Number(pressureValue) <= UP_PRESSURE_MAX;
 
-  const overallStatus = isHotNormal ? "NORMAL" : "ABNORMAL";
-  const badgeColor = overallStatus === "NORMAL" ? "success" : "error";
+  const status = isHotNormal ? "NORMAL" : "ABNORMAL";
+  const badgeColor = status === "NORMAL" ? "success" : "error";
 
-  console.log(error)
+  // ✅ Baru kondisional render di sini
+  if (!config) {
+    return (
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <p className="text-gray-600 dark:text-gray-400">
+          Invalid cell selection: {selectedCell}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full gap-6 flex-col col-span-4 md:col-span-2 lg:col-span-1 h-full">
@@ -116,7 +100,7 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
           </h3>
         </div>
 
-        { isLoading ? (
+        {isLoading ? (
           <p className="text-gray-400 mt-4">Loading data...</p>
         ) : (
           <div className="flex flex-wrap items-end justify-between mt-5 md:px-2">
@@ -124,39 +108,22 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 Pressure Avg
               </span>
-            <div className="flex flex-col mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
+              <div className="flex flex-col mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
                 {pressureValue} Kgf
                 <span className="text-xs text-gray-400">
                   ({UP_PRESSURE_MIN}-{UP_PRESSURE_MAX}) Kgf
                 </span>
               </div>
             </div>
-            {/* <div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                Time Press
-              </span>
-            <div className="flex flex-col mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
-                {timeValue} S
-                <span className="text-xs text-gray-400 ml-6">
-                  ({UP_TIME_MIN}-{UP_TIME_MAX}) S
-                </span>
-              </div>
-            </div> */}
           </div>
         )}
 
         <div className="mt-6 w-full flex flex-col items-center gap-2">
-          <Badge
-            variant="light"
-            color={badgeColor}
-            size="sm"
-            startIcon={<ArrowUpIcon />}
-          >
-            {overallStatus}
+          <Badge variant="light" color={badgeColor} size="sm" startIcon={<ArrowUpIcon />}>
+            {status}
           </Badge>
           <UptimeBar value={70} />
         </div>
-
       </div>
     </div>
   );

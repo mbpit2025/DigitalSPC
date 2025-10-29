@@ -65,7 +65,7 @@ export interface ProductionStandards {
 
 export interface CardProps {
     selectedCell: 'B1-01' | 'B1-02';
-    selectedModel: string | null;
+    selectedModel: string;
     title : string
 }
 

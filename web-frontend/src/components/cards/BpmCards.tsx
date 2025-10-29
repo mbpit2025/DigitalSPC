@@ -1,45 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
 import { useDashboardData } from "@/context/DashboardDataContext";
 import Badge from "../ui/badge/Badge";
 import { GroupIcon, ArrowUpIcon } from "@/icons";
 import { UptimeBar } from "../dashboard/Uptime";
-import { MachineStandardLimits, CardProps, DataPoint } from "@/types/production-standards";
+import { CardProps, DataPoint } from "@/types/production-standards";
 
-const FALLBACK_STANDARDS: MachineStandardLimits = {
-  HOT_TEMP_MIN: 80,
-  HOT_TEMP_MAX: 90,
-  COLD_TEMP_MIN: 10,
-  COLD_TEMP_MAX: 40,
-  PR_UP_TEMP_MAX: 80,
-  PR_UP_TEMP_MIN: 70,
-  PR_OT_TEMP_MAX: 80,
-  PR_OT_TEMP_MIN: 70,
-  PM1_UP_TEMP_MAX: 55,
-  PM1_UP_TEMP_MIN: 50,
-  PM1_OT_TEMP_MAX: 55,
-  PM1_OT_TEMP_MIN: 50,
-  PM2_UP_TEMP_MAX: 55,
-  PM2_UP_TEMP_MIN: 50,
-  PM2_OT_TEMP_MAX: 55,
-  PM2_OT_TEMP_MIN: 50,
-  CM_UP_TEMP_MAX: 65,
-  CM_UP_TEMP_MIN: 60,
-  CM_OT_TEMP_MAX: 65,
-  CM_OT_TEMP_MIN: 60,
-  CH_UP_TEMP_MAX: 31,
-  CH_UP_TEMP_MIN: 25,
-  CH_OT_TEMP_MAX: 25,
-  CH_OT_TEMP_MIN: 31,
-  GM_PRESS_MAX: 3,
-  GM_PRESS_MIN: 2.5,
-  GM_TIME_MAX: 3,
-  GM_TIME_MIN: 2,
-  UP_PRESSURE_MAX: 40,
-  UP_PRESSURE_MIN: 35,
-  UP_TIME_MAX: 12,
-  UP_TIME_MIN: 10,
-};
 
 const BPM_CELL_MAP = {
   "B1-01": {
@@ -55,30 +20,7 @@ const BPM_CELL_MAP = {
 };
 
 export const BPMCard = ({ selectedCell, selectedModel }: CardProps) => {
-  const { data } = useDashboardData();
-  const [standardData, setStandardData] = useState<Record<string, MachineStandardLimits>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Ambil data standard dari API
-  useEffect(() => {
-    const fetchStandards = async () => {
-      try {
-        setIsLoading(true);
-        const res = await fetch(`/api/standards`);
-        if (!res.ok) throw new Error("Failed to fetch standard data");
-        const result = await res.json();
-        setStandardData(result || {});
-      } catch (err: unknown) {
-        console.error("Error fetching standard data:", (err as Error).message);
-        setError((err as Error).message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchStandards();
-  }, []);
-
+  const { data, standardData } = useDashboardData();
 
   const config = BPM_CELL_MAP[selectedCell];
   if (!config) {
@@ -93,8 +35,7 @@ export const BPMCard = ({ selectedCell, selectedModel }: CardProps) => {
 
   const standards =
     (selectedModel && standardData[selectedModel]) ||
-    standardData["DEFAULT"] ||
-    FALLBACK_STANDARDS;
+    standardData["DEFAULT"];
 
   const { HOT_TEMP_MIN, HOT_TEMP_MAX, COLD_TEMP_MIN, COLD_TEMP_MAX } = standards;
 
@@ -125,14 +66,6 @@ export const BPMCard = ({ selectedCell, selectedModel }: CardProps) => {
   const badgeColor = overallStatus === "NORMAL" ? "success" : "error";
 
 
-  if (error) {
-    return (
-      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <p className="text-red-500">Error: {error}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="flex gap-6 flex-col col-span-4 md:col-span-2 lg:col-span-1 h-full">
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] flex flex-col justify-between">
@@ -153,11 +86,9 @@ export const BPMCard = ({ selectedCell, selectedModel }: CardProps) => {
             <div className="flex flex-col mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
               {hotTemp ? `${hotTemp.value} °C` : "--"} 
               <span className="text-xs text-gray-400">
-                {isLoading ? "loading Standards..." : (
                   <>
                     ({HOT_TEMP_MIN}-{HOT_TEMP_MAX}) °C
                   </>
-                )}
               </span>
             </div>
           </div>
@@ -168,11 +99,9 @@ export const BPMCard = ({ selectedCell, selectedModel }: CardProps) => {
             <div className="flex flex-col mt-2 font-bold text-gray-800 text-title-sm dark:text-white/90">
               {coldTemp ? `${coldTemp.value} °C` : "--"}
               <span className="text-xs text-gray-400">
-                {isLoading ? "loading Standards..." : (
                   <>
                     ({COLD_TEMP_MIN}-{COLD_TEMP_MAX}) °C
                   </>
-                )}  
               </span>
             </div>
           </div>

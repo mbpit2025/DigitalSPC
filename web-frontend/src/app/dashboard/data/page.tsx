@@ -1,5 +1,6 @@
 "use client";
 
+import { useDashboardData } from "@/context/DashboardDataContext";
 import React, { useEffect, useState } from "react";
 
 interface DataPoint {
@@ -15,6 +16,8 @@ const REFRESH_INTERVAL = 15; // detik
 export default function DashboardPage() {
   const [data, setData] = useState<DataPoint[]>([]);
   const [counter, setCounter] = useState(REFRESH_INTERVAL);
+
+  const dashData = useDashboardData()
 
   // Fetch data function
   const fetchData = async () => {
@@ -112,6 +115,15 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      <div>
+        <h1>Dashboard data Provider</h1>
+        <pre className="text-gray-200">
+          {JSON.stringify(dashData.standardData || {}, null, 2)}
+        </pre>
+      </div>
+
+
     </section>
   );
 }

@@ -11,21 +11,25 @@ import {
 /**
  * Custom LineAnnotation — untuk anotasi batas suhu misalnya.
  */
-export interface LineAnnotation {
-  type: 'line';
+export type LineAnnotation = {
+  type: "line";
   yMin: number;
   yMax: number;
-  borderColor: string;
-  borderWidth: number;
+  borderColor?: string;
+  borderWidth?: number;
   borderDash?: number[];
   label?: {
     content: string;
-    position?: 'start' | 'center' | 'end';
+    position?: "start" | "center" | "end";
     backgroundColor?: string;
     color?: string;
-    font?: { weight?: 'bold' | string };
+    font?: {
+      size?: number;
+      weight?: string;
+    };
   };
-}
+};
+
 
 declare module 'chart.js' {
   interface PluginOptionsByType<TType extends ChartType> {
