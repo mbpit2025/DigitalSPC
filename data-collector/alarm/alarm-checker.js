@@ -94,10 +94,10 @@ async function getStandardByModel(model_id) {
 async function checkAlarms() {
   try {
     const now = DateTime.now().setZone(JAKARTA_TZ);
-    console.log(`\n[ALARM CHECK] ${now.toISO()} — Cek alarm dari database`);
+    // console.log(`\n[ALARM CHECK] ${now.toISO()} — Cek alarm dari database`);
 
     const latestRows = await dbQuery(`SELECT * FROM v_latest_plc_data`);
-    console.log(`[CHECK] Ditemukan data terbaru: ${latestRows.length} baris`);
+    // console.log(`[CHECK] Ditemukan data terbaru: ${latestRows.length} baris`);
 
     const activeModels = await getActiveModels();
 
@@ -130,11 +130,11 @@ async function checkAlarms() {
         logged: false,
       };
 
-      console.log(
-        `[CHECK] PLC ${plc_id} | Line ${line_name} | Tag ${tag_name} (${paramName}) → Value: ${val}, Min: ${min}, Max: ${max} → ${
-          isAbnormal ? "⚠️ ABNORMAL" : "✅ NORMAL"
-        }`
-      );
+      // console.log(
+      //   `[CHECK] PLC ${plc_id} | Line ${line_name} | Tag ${tag_name} (${paramName}) → Value: ${val}, Min: ${min}, Max: ${max} → ${
+      //     isAbnormal ? "⚠️ ABNORMAL" : "✅ NORMAL"
+      //   }`
+      // );
 
       // ======================================================
       // 🚨 Kondisi ABNORMAL

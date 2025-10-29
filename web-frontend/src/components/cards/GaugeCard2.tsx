@@ -49,7 +49,7 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
   // 🔁 Fungsi fetch API
   const fetchData = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_LOCAL_API_BASE_URL}/api/pwi-api/mc-data`, {
+      const res = await fetch(`http://10.2.11.4:6060/api/get_pressure_data`, {
         cache: "no-store",
       });
       // if (!res.ok) throw new Error("Gagal mengambil data dari API");

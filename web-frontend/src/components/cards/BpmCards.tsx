@@ -44,13 +44,13 @@ const FALLBACK_STANDARDS: MachineStandardLimits = {
 const BPM_CELL_MAP = {
   "B1-01": {
     plcId: "1",
-    hotTag: "data5",
-    coldTag: "data3",
+    hotTag: "data2",
+    coldTag: "data5",
   },
   "B1-02": {
     plcId: "4",
-    hotTag: "data5",
-    coldTag: "data3",
+    hotTag: "data2",
+    coldTag: "data5",
   },
 };
 

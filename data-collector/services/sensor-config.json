@@ -1,0 +1,29 @@
+{
+  "sensorRegistry": [
+    { "plc_id": "1", "tag_name": "data2", "sensor_type": "PT-100" },
+    { "plc_id": "1", "tag_name": "data3", "sensor_type": "PT-100" },
+    { "plc_id": "1", "tag_name": "data4", "sensor_type": "PT-100" },
+    { "plc_id": "1", "tag_name": "data5", "sensor_type": "PT-100" },
+    { "plc_id": "1", "tag_name": "data6", "sensor_type": "PT-100" },
+    { "plc_id": "1", "tag_name": "data7", "sensor_type": "PT-100" },
+    { "plc_id": "1", "tag_name": "data8", "sensor_type": "PT-100" },
+    { "plc_id": "1", "tag_name": "data9", "sensor_type": "PT-100" },
+    { "plc_id": "PLC2", "tag_name": "data1", "sensor_type": "Infrared" }
+  ],
+  "calibrationRules": {
+    "PT-100": [
+      { "raw_min": 0, "raw_max": 200, "formula": "x + 50" },
+      { "raw_min": 200, "raw_max": 210, "formula": "x * 57" },
+      { "raw_min": 210, "raw_max": 217, "formula": "x * 62" },
+      { "raw_min": 217, "raw_max": 225, "formula": "x * 83" },
+      { "raw_min": 225, "raw_max": 235, "formula": "x * 96" },
+      { "raw_min": 235, "raw_max": 256, "formula": "x * 110" },
+      { "raw_min": 256, "raw_max": 295, "formula": "x * 132" },
+      { "raw_min": 295, "raw_max": 1000, "formula": "x * 230" }
+    ],
+    "Infrared": [
+      { "raw_min": 0, "raw_max": 200, "formula": "x - 0" },
+      { "raw_min": 200, "raw_max": 500, "formula": "x * 1" }
+    ]
+  }
+}

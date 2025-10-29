@@ -43,7 +43,7 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
 
   const config = DATA_MAP[selectedCell];
   const selectedPlcIds = [config.plc_name];
-  const API_ENDPOINT = `${process.env.NEXT_PUBLIC_LOCAL_API_BASE_URL ?? ""}/api/pwi-api/mc-data`;
+  const API_ENDPOINT = `http://10.2.11.4:6060/api/get_pressure_data`;
 
   // 🔁 Fungsi fetch API — dibuat useCallback agar tidak bikin interval ganda
   const fetchData = useCallback(async () => {

@@ -9,7 +9,7 @@ const PLCS = [
           // Range 1: Diterapkan ke data1, data2, data3
           'data2|data3|data8|data9': { min: 80, max: 90 }, 
           // Range 2: Diterapkan ke data4, data5, data6
-          'data4|data5|data6|data7': { min: 27, max: 40 }, 
+          'data4|data5|data6|data7': { min: 27, max: 30 }, 
           // Range Default jika tidak ada yang cocok
           'default': { min: 50, max: 55 }
       } 
@@ -25,7 +25,7 @@ const PLCS = [
     },
     { id: "3", name: 'CHILLER_LINE_1', ip: '10.2.13.76', port: 502, unitId: 1,
         tagRanges: {
-          'default': { min: 26, max: 35 }
+          'default': { min: 26, max: 29 }
       }
     },
     { id: "4", name: 'BPM_LINE_2', ip: '10.2.13.77', port: 502, unitId: 2,

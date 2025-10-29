@@ -35,7 +35,7 @@ export default function AlarmSections() {
   useEffect(() => {
     const fetchAlarms = async () => {
       try {
-        const res = await fetch("http://10.2.14.71:3000/api/alarm", {
+        const res = await fetch("/api/alarm", {
           cache: "no-store",
         });
         if (!res.ok) throw new Error("Failed to fetch alarm data");
