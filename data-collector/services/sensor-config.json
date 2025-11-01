@@ -8,22 +8,90 @@
     { "plc_id": "1", "tag_name": "data7", "sensor_type": "PT-100" },
     { "plc_id": "1", "tag_name": "data8", "sensor_type": "PT-100" },
     { "plc_id": "1", "tag_name": "data9", "sensor_type": "PT-100" },
-    { "plc_id": "PLC2", "tag_name": "data1", "sensor_type": "Infrared" }
+    { "plc_id": "2", "tag_name": "data2", "sensor_type": "Infrared" },
+    { "plc_id": "2", "tag_name": "data2", "sensor_type": "Infrared" },
+    { "plc_id": "2", "tag_name": "data3", "sensor_type": "Infrared" },
+    { "plc_id": "2", "tag_name": "data4", "sensor_type": "Infrared" },
+    { "plc_id": "2", "tag_name": "data5", "sensor_type": "Infrared" },
+    { "plc_id": "2", "tag_name": "data6", "sensor_type": "Infrared" },
+    { "plc_id": "2", "tag_name": "data7", "sensor_type": "Infrared" },
+    { "plc_id": "2", "tag_name": "data8", "sensor_type": "Infrared" },
+    { "plc_id": "2", "tag_name": "data9", "sensor_type": "Infrared" },
+    { "plc_id": "3", "tag_name": "data2", "sensor_type": "Infrared" },
+    { "plc_id": "3", "tag_name": "data3", "sensor_type": "Infrared" },
+    { "plc_id": "4", "tag_name": "data2", "sensor_type": "PT-100" },
+    { "plc_id": "4", "tag_name": "data3", "sensor_type": "PT-100" },
+    { "plc_id": "4", "tag_name": "data4", "sensor_type": "PT-100" },
+    { "plc_id": "4", "tag_name": "data5", "sensor_type": "PT-100" },
+    { "plc_id": "4", "tag_name": "data6", "sensor_type": "PT-100" },
+    { "plc_id": "4", "tag_name": "data7", "sensor_type": "PT-100" },
+    { "plc_id": "4", "tag_name": "data8", "sensor_type": "PT-100" },
+    { "plc_id": "4", "tag_name": "data9", "sensor_type": "PT-100" },
+    { "plc_id": "5", "tag_name": "data2", "sensor_type": "PT-Infrared" },
+    { "plc_id": "5", "tag_name": "data2", "sensor_type": "PT-Infrared" },
+    { "plc_id": "5", "tag_name": "data3", "sensor_type": "PT-Infrared" },
+    { "plc_id": "5", "tag_name": "data4", "sensor_type": "PT-Infrared" },
+    { "plc_id": "5", "tag_name": "data5", "sensor_type": "PT-Infrared" },
+    { "plc_id": "5", "tag_name": "data6", "sensor_type": "PT-Infrared" },
+    { "plc_id": "5", "tag_name": "data7", "sensor_type": "PT-Infrared" },
+    { "plc_id": "5", "tag_name": "data8", "sensor_type": "PT-Infrared" },
+    { "plc_id": "5", "tag_name": "data9", "sensor_type": "PT-Infrared" },
+    { "plc_id": "6", "tag_name": "data2", "sensor_type": "Infrared" },
+    { "plc_id": "6", "tag_name": "data3", "sensor_type": "Infrared" }
+    
   ],
   "calibrationRules": {
     "PT-100": [
       { "raw_min": 0, "raw_max": 200, "formula": "x + 50" },
-      { "raw_min": 200, "raw_max": 210, "formula": "x * 57" },
-      { "raw_min": 210, "raw_max": 217, "formula": "x * 62" },
-      { "raw_min": 217, "raw_max": 225, "formula": "x * 83" },
-      { "raw_min": 225, "raw_max": 235, "formula": "x * 96" },
-      { "raw_min": 235, "raw_max": 256, "formula": "x * 110" },
-      { "raw_min": 256, "raw_max": 295, "formula": "x * 132" },
-      { "raw_min": 295, "raw_max": 1000, "formula": "x * 230" }
+      { "raw_min": 200, "raw_max": 210, "formula": "x + 57" },
+      { "raw_min": 210, "raw_max": 217, "formula": "x + 62" },
+      { "raw_min": 217, "raw_max": 225, "formula": "x + 83" },
+      { "raw_min": 225, "raw_max": 235, "formula": "x + 96" },
+      { "raw_min": 235, "raw_max": 256, "formula": "x + 110" },
+      { "raw_min": 256, "raw_max": 295, "formula": "x + 132" },
+      { "raw_min": 295, "raw_max": 1000, "formula": "x + 180" }
     ],
-    "Infrared": [
-      { "raw_min": 0, "raw_max": 200, "formula": "x - 0" },
-      { "raw_min": 200, "raw_max": 500, "formula": "x * 1" }
+      "Infrared": [
+ { "raw_min": 1285, "raw_max": 1431, "formula": "x * -0.952055 + 1465.390411" },
+    { "raw_min": 1431, "raw_max": 1517, "formula": "x * 0.779070 - 1011.848837" },
+    { "raw_min": 1517, "raw_max": 1576, "formula": "x * 0.576271 - 704.203390" },
+    { "raw_min": 1576, "raw_max": 1623, "formula": "x * 2.127660 - 3149.191489" },
+    { "raw_min": 1623, "raw_max": 1635, "formula": "x * 0.750000 - 913.250000" },
+    { "raw_min": 1635, "raw_max": 1642, "formula": "x * 0.857143 - 1088.428571" },
+    { "raw_min": 1642, "raw_max": 1645, "formula": "x * 1.666667 - 2417.666667" },
+    { "raw_min": 1645, "raw_max": 1675, "formula": "x * 1.033333 - 1375.833333" },
+    { "raw_min": 1675, "raw_max": 1682, "formula": "x * 0.714286 - 841.428571" },
+    { "raw_min": 1682, "raw_max": 1688, "formula": "x * 2.000000 - 3004.000000" },
+    { "raw_min": 1688, "raw_max": 1695, "formula": "x * 0.857143 - 1074.857143" },
+    { "raw_min": 1695, "raw_max": 1702, "formula": "x * 1.428571 - 2043.428571" },
+    { "raw_min": 1702, "raw_max": 1710, "formula": "x * 1.250000 - 1739.500000" },
+    { "raw_min": 1710, "raw_max": 1723, "formula": "x * 2.923077 - 4600.461538" },
+    { "raw_min": 1723, "raw_max": 1977, "formula": "x * 0.657480 - 696.838583" },
+    { "raw_min": 1977, "raw_max": 2006, "formula": "x * 1.551724 - 2464.758621" },
+    { "raw_min": 2006, "raw_max": 2100, "formula": "x * 0.691489 - 739.127660" }
     ]
-  }
+  },
+  "lookupTables": {
+  "Infrared": [
+    { "sensor": 1431, "temp": 103 },
+    { "sensor": 1517, "temp": 170 },
+    { "sensor": 1576, "temp": 204 },
+    { "sensor": 1285, "temp": 242 },
+    { "sensor": 1623, "temp": 304 },
+    { "sensor": 1635, "temp": 313 },
+    { "sensor": 1642, "temp": 319 },
+    { "sensor": 1645, "temp": 324 },
+    { "sensor": 1675, "temp": 355 },
+    { "sensor": 1682, "temp": 360 },
+    { "sensor": 1688, "temp": 372 },
+    { "sensor": 1695, "temp": 378 },
+    { "sensor": 1702, "temp": 388 },
+    { "sensor": 1710, "temp": 398 },
+    { "sensor": 1723, "temp": 436 },
+    { "sensor": 1977, "temp": 603 },
+    { "sensor": 2006, "temp": 648 },
+    { "sensor": 2100, "temp": 713 }
+  ]
 }
+}
+

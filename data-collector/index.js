@@ -12,6 +12,9 @@ const {
 
 const { DateTime } = require("luxon");
 const cron = require("node-cron");
+const { calibrate } = require("./services/calibration");
+const net = require("net");
+
 
 // =============================================================
 // KONSTANTA & INISIALISASI WAKTU
@@ -136,6 +139,32 @@ async function historyProcessorLoop() {
   setTimeout(historyProcessorLoop, CHECK_HISTORY_INTERVAL_MS);
 }
 
+
+async function testTcpConnection(ip, port, timeout = 2000) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const socket = new net.Socket();
+
+    // Timeout
+    socket.setTimeout(timeout);
+
+    socket
+      .connect(port, ip, () => {
+        const latency = Date.now() - start;
+        socket.destroy();
+        resolve({ isConnected: true, latency });
+      })
+      .on("timeout", () => {
+        socket.destroy();
+        resolve({ isConnected: false, latency: null });
+      })
+      .on("error", () => {
+        resolve({ isConnected: false, latency: null });
+      });
+  });
+}
+
+
 // =============================================================
 // #3 MODBUS POLLING CORE LOGIC
 // =============================================================
@@ -143,6 +172,20 @@ async function historyProcessorLoop() {
 /**
  * Menghubungkan semua klien Modbus.
  */
+async function checkTcpBeforeModbus(plc) {
+  const tcp = await testTcpConnection(plc.ip, plc.port);
+
+  if (!tcp.isConnected) {
+    plc.isConnected = false;
+    console.error(`[TCP ERROR] ${plc.name} (${plc.ip}) tidak bisa dihubungi.`);
+    return false;
+  }
+
+  console.log(`[TCP OK] ${plc.name} latency ${tcp.latency}ms`);
+  return true;
+}
+
+
 async function connectAllPlcs() {
   console.log("[PLC] Mencoba koneksi awal ke PLC...");
   const connectionPromises = clients.map(async (plc) => {
@@ -163,6 +206,13 @@ async function connectAllPlcs() {
  * Membaca register dari satu PLC.
  */
 async function readAndProcess(plc) {
+
+    const readPromises = clients.map(async (plc) => {
+    const ok = await checkTcpBeforeModbus(plc);
+    if (!ok) return []; 
+    return readAndProcess(plc);
+  });
+
   if (!plc.isConnected) {
     try {
       // Coba reconnect jika terputus
@@ -184,16 +234,38 @@ async function readAndProcess(plc) {
   try {
     // Membaca semua register dalam satu panggilan Modbus
     const response = await plc.client.readHoldingRegisters(START_REGISTER, TOTAL_COUNT);
-    const values = response.data;
+    const values = Array.isArray(response.data) ? response.data : (response.data || []);
     const timestamp = DateTime.now().setZone(JAKARTA_TIMEZONE).toISO();
 
     DATA_POINTS_MAP.forEach((point, index) => {
-      const rawValue = values[index];
+      const rawValue = typeof values[index] !== "undefined" ? values[index] : null;
+
+      if (rawValue === null) {
+        console.warn(`[PLC READ] ${plc.name} - index ${index} (${point.tag_name}) => value missing`);
+        return;
+      }
+
+      let calibratedValue;
+      try {
+        calibratedValue = calibrate(String(plc.id), point.tag_name, rawValue);
+      } catch (err) {
+        console.error(`[KALIBRASI ERROR] ${plc.name} ${point.tag_name}: ${err.message}`);
+        calibratedValue = processedValue; // fallback
+      }
+
+      let displayValue = calibratedValue;
+      if (index >= 1 && index <= 8) {
+        displayValue = Number((calibratedValue / 10).toFixed(1));
+      }
+
+      console.log(`[KALIBRASI DEBUG] PLC=${plc.name} (${plc.id}) Tag=${point.tag_name} Raw=${rawValue} Processed=${rawValue} Calibrated=${displayValue}`);
+
+
       dataFromPlc.push({
         plc_id: String(plc.id), // Pastikan format ID sesuai
         plc_name: plc.name,
         tag_name: point.tag_name,
-        value: rawValue,
+        value: displayValue,
         timestamp, // Tambahkan timestamp untuk data real-time
       });
     });
@@ -203,6 +275,49 @@ async function readAndProcess(plc) {
   }
 
   return dataFromPlc;
+}
+
+
+
+// -------------------------------------------------------------
+// SYNC WAKTU KE PLC (setiap 3 menit — bisa disesuaikan)
+// -------------------------------------------------------------
+async function syncTimeToPlc(plc) {
+  try {
+    if (!plc.isConnected) {
+      await plc.client.connectTCP(plc.ip, { port: plc.port });
+      plc.isConnected = true;
+      console.log(`[SYNC RECONNECT] Reconnected to ${plc.name}`);
+    }
+
+    plc.client.setID(String(plc.unitId));
+
+    const now = DateTime.now().setZone(JAKARTA_TIMEZONE);
+    const hour = now.hour;
+    const minute = now.minute;
+    const day = now.day;
+
+    // Pastikan register sesuai urutan PLC
+    await plc.client.writeRegister(201, minute);
+    await plc.client.writeRegister(202, hour);
+    await plc.client.writeRegister(203, day);
+
+    console.log(`[TIME SYNC] ${plc.name}: ${hour}:${minute} tanggal ${day}`);
+  } catch (e) {
+    console.error(`[TIME SYNC ERROR] ${plc.name}: ${e.message}`);
+    plc.isConnected = false;
+  }
+}
+
+
+function startTimeSync() {
+  const INTERVAL_MS = 60 * 1000; // 3 menit
+  console.log(`⏱️ Sinkronisasi waktu ke PLC setiap ${INTERVAL_MS / 1000}s`);
+  setInterval(async () => {
+    for (const plc of clients) {
+      await syncTimeToPlc(plc);
+    }
+  }, INTERVAL_MS);
 }
 
 /**
@@ -256,19 +371,16 @@ async function startCollector() {
   await initTableForToday();
   startDailyCleaner();
 
+
   // #2 Koneksi Awal ke PLC
   await connectAllPlcs();
 
   if (clients.some((c) => c.isConnected)) {
     console.log("Koneksi PLC berhasil. Memulai loop akuisisi dan history data.");
-    // Mulai loop akuisisi data real-time
     pollingLoop();
-    // Mulai loop pemrosesan history
     historyProcessorLoop();
   } else {
     console.error("Semua PLC GAGAL terhubung. Retry dalam 10 detik.");
-
-    // 🚨 Kirim notifikasi awal gagal total
     pushLatestData([
       {
         type: "ALERT",
@@ -279,6 +391,8 @@ async function startCollector() {
 
     setTimeout(startCollector, 10000);
   }
+
+  startTimeSync();
   console.log("=========================================");
 }
 

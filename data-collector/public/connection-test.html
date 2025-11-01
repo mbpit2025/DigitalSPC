@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>PLC Connection Test</title>
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+
+<div class="w-full max-w-7xl bg-gradient-to-br from-indigo-950 to-sky-700 shadow-lg rounded-xl p-6 mt-6 text-indigo-50">
+
+  <h1 class="text-2xl font-bold mb-4">PWI2 Minz Digitalization SB Connection Test</h1>
+
+  <div class="mb-4 text-indigo-50 flex justify-between items-center">
+    <span id="last-update" class="text-sm">Last update: -</span>
+    <span id="refresh-counter" class="text-sm">Refresh in: 5s</span>
+  </div>
+
+  <!-- Tabel status -->
+  <div class="overflow-x-auto mb-8">
+    <table class="w-full text-left border-collapse">
+
+      <thead>
+        <tr class="bg-purple-900 uppercase text-sm">
+          <th class="py-3 px-4 border-b">PLC Name</th>
+          <th class="py-3 px-4 border-b">IP</th>
+          <th class="py-3 px-4 border-b">Status</th>
+          <th class="py-3 px-2 text-center border-b">Lat</th>
+          <th class="py-3 px-4 border-b">Quality</th>   <!-- ✅ NEW -->
+          <th class="py-3 px-4 border-b">Last Checked</th>
+        </tr>
+      </thead>
+
+      <tbody id="plc-table"></tbody>
+    </table>
+  </div>
+
+  <!-- Chart Container -->
+  <h2 class="text-2xl font-semibold mb-2">Latency Chart</h2>
+  <canvas id="latencyChart" height="200" class="bg-indigo-200 p-6 rounded-md"></canvas>
+
+</div>
+
+<script>
+const API_URL = "http://localhost:3001/api/connection-status";
+let REFRESH_INTERVAL = 5;
+let counter = REFRESH_INTERVAL;
+
+let chart = null;
+let chartLabels = [];
+
+const COLORS = [
+  "red", "blue", "green", "orange", "purple",
+  "brown", "teal", "magenta", "gray", "black"
+];
+
+function loadStatus() {
+  fetch(API_URL)
+    .then((res) => res.json())
+    .then((json) => {
+      if (!chart) initChart(json.data);
+      updateUI(json);
+    })
+    .catch(() => {
+      const dummy = [
+        { plc_name: "PLC_1", plc_ip:"-", ip:"-", port: "-", isConnected: false, latency: null, lastCheckTime: "-" },
+        { plc_name: "PLC_2", plc_ip:"-", ip:"-", port: "-", isConnected: false, latency: null, lastCheckTime: "-" },
+        { plc_name: "PLC_3", plc_ip:"-", ip:"-", port: "-", isConnected: false, latency: null, lastCheckTime: "-" },
+      ];
+      if (!chart) initChart(dummy);
+      updateUI({
+        timestamp: new Date().toISOString(),
+        data: dummy,
+      });
+    });
+}
+
+function getQuality(latency) {
+  if (latency === null || latency === undefined) {
+    return {
+      text: "Failed ❌",
+      class: "bg-red-600 text-red-900 font-bold"
+    };
+  }
+  if (latency <= 5) {
+    return {
+      text: "Excellent ✅",
+      class: "bg-green-300 text-green-900 font-bold"
+    };
+  }
+  if (latency <= 10) {
+    return {
+      text: "Good ✅",
+      class: "bg-green-300 text-green-900 font-bold"
+    };
+  }
+  if (latency <= 20) {
+    return {
+      text: "Cukup ⚠",
+      class: "bg-yellow-300 text-yellow-400 font-bold"
+    };
+  }
+  return {
+    text: "Bad ❌",
+    class: "bg-red-300 text-red-900 font-bold"
+  };
+}
+
+function updateUI(json) {
+  document.getElementById("last-update").innerText =
+    "Terakhir update: " + json.timestamp;
+
+  const tbody = document.getElementById("plc-table");
+  tbody.innerHTML = "";
+
+  chartLabels.push(new Date(json.timestamp).toLocaleTimeString());
+  if (chartLabels.length > 15) chartLabels.shift();
+
+  json.data.forEach((plc, index) => {
+    const quality = getQuality(plc.latency);
+
+    tbody.innerHTML += `
+      <tr class="hover:bg-purple-950 bg-purple-300 text-indigo-950 hover:text-indigo-50 py-1">
+        <td class="py-3 px-4 border-b ${plc.isConnected ? 'bg-green-300' : 'bg-red-300'}">${plc.plc_name}</td>
+        <td class="py-3 px-4 border-b">${plc.ip}:${plc.port}</td>
+        <td class="py-3 px-4 border-b ${plc.isConnected ? "text-green-600 font-bold bg-green-300 text-sm" : "text-red-600 font-bold bg-red-300 text-sm"}">
+          ${plc.isConnected ? "CONNECTED ✅" : "DISCONNECTED ❌"}
+        </td>
+        <td class="py-3 px-4 border-b">${plc.latency ?? "-"} ms</td>
+
+        <!-- ✅ Quality -->
+        <td class="py-3 px-4 border-b ${quality.class}">
+          ${quality.text}
+        </td>
+
+        <td class="py-3 px-4 border-b text-center">
+          ${
+            plc.lastCheckTime
+              ? new Date(plc.lastCheckTime).toLocaleTimeString()
+              : "-"
+          }
+        </td>
+      </tr>
+    `;
+
+    // ✅ Update chart
+    chart.data.datasets[index].data.push(plc.latency ?? 0);
+    if (chart.data.datasets[index].data.length > 15)
+      chart.data.datasets[index].data.shift();
+  });
+
+  chart.data.labels = chartLabels;
+  chart.update();
+}
+
+
+function initChart(plcs) {
+  const ctx = document.getElementById("latencyChart").getContext("2d");
+
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: plcs.map((p, i) => ({
+        label: p.plc_name,
+        data: [],
+        borderColor: COLORS[i % COLORS.length],
+        borderWidth: 2,
+        fill: false,
+        tension: 0.3,
+      })),
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: true, position: "bottom" },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: "Latency (ms)" },
+        },
+        x: {
+          title: { display: true, text: "Time" },
+        },
+      },
+    },
+  });
+}
+
+setInterval(() => {
+  counter--;
+  document.getElementById("refresh-counter").innerText =
+    `Refresh dalam: ${counter}s`;
+  if (counter <= 0) {
+    loadStatus();
+    counter = REFRESH_INTERVAL;
+  }
+}, 1000);
+
+loadStatus();
+</script>
+
+
+<script>
+console.log("Frontend loaded");
+</script>
+
+</body>
+</html>

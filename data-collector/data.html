@@ -100,13 +100,14 @@
     <span id="last-updated">Loading...</span>
     <label for="refresh-interval">Refresh Interval:</label>
     <select id="refresh-interval">
+      <option value="1000">1 Detik</option>
       <option value="3000">3 Detik</option>
       <option value="5000">5 Detik</option>
       <option value="10000">10 Detik</option>
-      <option value="15000" selected>15 Detik</option>
+      <option value="1000" selected>1 Detik</option>
     </select>
     <div id="countdown-container">
-      | Next Refresh in: <span id="countdown">15</span>s ⏳
+      | Next Refresh in: <span id="countdown">1</span>s ⏳
     </div>
   </div>
 
@@ -209,6 +210,7 @@
                 <thead>
                   <tr>
                     <th>Tag Name</th>
+                    <th>Raw Value</>
                     <th>Value</th>
                     <th>Timestamp (WIB)</th>
                   </tr>
@@ -245,13 +247,15 @@
                 };
 
 
-                let valueDisplay = item.value;
+                let rawDisplay = item.raw_value;
+                let calibratedDisplay = item.value;
 
-                if(requiresDecimalFormat(item.tag_name)) {
-                  valueDisplay = Number(item.value).toFixed(1);
+                if (requiresDecimalFormat(item.tag_name)) {
+                  calibratedDisplay = Number(item.value).toFixed(1);
                 }
 
-                row.insertCell().textContent = valueDisplay;
+                row.insertCell().textContent = rawDisplay;
+                row.insertCell().textContent = calibratedDisplay;
                 row.insertCell().textContent = new Date(item.timestamp).toLocaleTimeString(
                   "id-ID",
                   { timeZone: "Asia/Jakarta" }
