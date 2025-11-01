@@ -17,7 +17,7 @@ const API_PORT = 3001;
 // ============================================================
 // FILE FRONTEND
 // ============================================================
-const DASHBOARD_FILE = path.join(__dirname, "data.html");
+const DASHBOARD_FILE = path.join(__dirname,"public", "data.html");
 const ALIAS_FILE = path.join(__dirname, "alias.json");
 const CONNECTION_PAGE = path.join(__dirname, "public", "connection-test.html");
 

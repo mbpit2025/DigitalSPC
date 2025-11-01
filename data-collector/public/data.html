@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<style>
+  .skeleton {
+    background: #3f4755;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.15) 50%,
+      transparent 100%
+    );
+    animation: skeleton-shimmer 1.5s infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+</style>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PLC Latest Data Dashboard</title>
+
+  <!-- ✅ Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
+
+  <!-- ✅ NAVBAR -->
+  <nav class="bg-gray-800 border-b border-gray-700">
+    <div class="max-w-screen-xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-6">
+        <a href="http://localhost:3001" class="text-blue-400 font-semibold hover:underline">Home</a>
+        <a href="http://localhost:3001/connection" class="hover:text-blue-300">Connection</a>
+
+        <!-- ✅ Dropdown FIXED -->
+        <div class="relative group">
+          <button class="hover:text-blue-300">API ▾</button>
+          <div
+            class="absolute opacity-0 invisible group-hover:opacity-100 group-hover:visible hover:opacity-100 hover:visible
+             bg-gray-800 border border-gray-700 rounded-md shadow-lg mt-2 p-2 w-48 z-50 transition-all duration-200">
+            <a href="http://localhost:3001/api/latest-data"
+            target="_blank" rel="noopener noreferrer"
+             class="block px-3 py-2 hover:bg-gray-700 rounded">Latest Data</a>
+            <a href="http://localhost:3001/api/update-alias"
+            target="_blank" rel="noopener noreferrer"
+             class="block px-3 py-2 hover:bg-gray-700 rounded">Alias</a>
+            <a href="http://localhost:3001/api/connection-status"
+            target="_blank" rel="noopener noreferrer"
+             class="block px-3 py-2 hover:bg-gray-700 rounded">Connection Status</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <div class="max-w-screen-xl mx-auto px-4 py-6">
+
+    <h1 class="text-3xl font-bold text-blue-400 mb-6">Real-Time Modbus Data Collector</h1>
+
+    <!-- ✅ Controls -->
+    <div id="control-container" class="flex items-center gap-5 text-sm bg-gray-800 p-3 rounded-md border border-gray-700">
+      <span id="last-updated" class="font-bold">Loading...</span>
+
+      <label for="refresh-interval">Refresh Interval:</label>
+      <select id="refresh-interval"
+        class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-gray-100">
+        <option value="1000">1 Detik</option>
+        <option value="3000">3 Detik</option>
+        <option value="5000">5 Detik</option>
+        <option value="10000">10 Detik</option>
+        <option value="1000" selected>1 Detik</option>
+      </select>
+
+      <div id="countdown-container" class="ml-auto flex gap-1">
+        <span>| Next Refresh in:</span>
+        <span id="countdown" class="font-bold text-yellow-300">1</span>s ⏳
+      </div>
+    </div>
+
+    <!-- ✅ Dashboard -->
+    <div id="plc-data-dashboard"
+      class="flex flex-wrap gap-5 mt-6 overflow-x-auto"></div>
+
+    <div id="plc-skeleton" class="flex flex-wrap gap-5 mt-6">
+      <div class="skeleton w-full h-[180px] flex items-center justify-center">Loading PLC Data ...</div>
+    </div>
+
+
+  </div>
+  <footer class="flex w-full p-6 justify-center items-center bg-black/50 py-8 text-gray-400">
+    <p>Minz Digitalization System</p>
+  </footer>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("plc-skeleton").style.display = "flex";
+      const API_URL = "/api/latest-data";
+      const TAG_API_URL = "/api/update-alias";
+      let tagNames = {};
+      let REFRESH_INTERVAL_MS = parseInt(document.getElementById("refresh-interval").value);
+      let pollingIntervalId;
+      let countdownTimer;
+
+      function requiresDecimalFormat(tagName) {
+        if (!tagName.startsWith('data')) return false;
+        const index = parseInt(tagName.substring(4));
+        return index >= 2 && index <= 9;
+      }
+
+      async function saveTagName(plc_name, tag_name, alias) {
+        try {
+          const res = await fetch(TAG_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ plc_name, tag_name, alias }),
+          });
+          const result = await res.json();
+          if (result.status === "success") {
+            tagNames[`${plc_name}_${tag_name}`] = alias;
+          }
+        } catch (err) {
+          console.error("[ALIAS ERROR] Gagal kirim:", err);
+        }
+      }
+
+      function startCountdown() {
+        clearInterval(countdownTimer);
+        let seconds = REFRESH_INTERVAL_MS / 1000;
+        const el = document.getElementById("countdown");
+        el.textContent = seconds;
+        countdownTimer = setInterval(() => {
+          seconds--;
+          el.textContent = seconds > 0 ? seconds : "0";
+          if (seconds <= 0) clearInterval(countdownTimer);
+        }, 1000);
+      }
+
+      document.getElementById("refresh-interval").addEventListener("change", (e) => {
+        REFRESH_INTERVAL_MS = parseInt(e.target.value);
+        clearInterval(pollingIntervalId);
+        pollingIntervalId = setInterval(fetchData, REFRESH_INTERVAL_MS);
+        startCountdown();
+      });
+
+      function groupDataByPlc(data) {
+        return data.reduce((acc, item) => {
+          if (!acc[item.plc_name]) acc[item.plc_name] = [];
+          acc[item.plc_name].push(item);
+          return acc;
+        }, {});
+      }
+
+      async function fetchData() {
+        try {
+          startCountdown();
+          const response = await fetch(API_URL);
+          const result = await response.json();
+          const dashboard = document.getElementById("plc-data-dashboard");
+          const skeleton = document.getElementById("plc-skeleton");
+          const lastUpdated = document.getElementById("last-updated");
+          dashboard.innerHTML = "";
+
+              // ✅ Kalau belum ada data → tampil skeleton
+          if (!result.data || result.data.length === 0) {
+            skeleton.style.display = "flex";
+            lastUpdated.textContent = "Menunggu data PLC...";
+            return;
+          }
+          skeleton.style.display = "none";
+
+          if (result.status === "success" && result.data.length > 0) {
+            lastUpdated.textContent =
+              "Last Data Poll: " +
+              new Date(result.timestamp).toLocaleTimeString("id-ID", {
+                timeZone: "Asia/Jakarta",
+              });
+
+            const grouped = groupDataByPlc(result.data);
+
+            for (const plcName in grouped) {
+              const box = document.createElement("div");
+              box.className =
+                "bg-gray-800 border border-gray-700 rounded-lg p-4 min-w-[350px] max-w-[400px]";
+
+              const title = document.createElement("h2");
+              title.className =
+                "text-xl font-semibold text-gray-200 border-b border-gray-700 pb-1 mb-3";
+              title.textContent = plcName;
+              box.appendChild(title);
+
+              const table = document.createElement("table");
+              table.className = "w-full text-sm border-collapse";
+
+              table.innerHTML = `
+                <thead>
+                  <tr class="bg-blue-600">
+                    <th class="px-3 py-2 text-left">Tag Name</th>
+                    <th class="px-3 py-2 text-left">Raw Value</th>
+                    <th class="px-3 py-2 text-left">Value</th>
+                    <th class="px-3 py-2 text-left">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              `;
+
+              const tbody = table.querySelector("tbody");
+
+              grouped[plcName].forEach((item) => {
+                const tr = document.createElement("tr");
+                tr.className = "odd:bg-gray-700";
+
+                const tagCell = document.createElement("td");
+                tagCell.className =
+                  "px-3 py-2 cursor-pointer hover:bg-gray-600 font-medium";
+                const key = `${item.plc_name}_${item.tag_name}`;
+                tagCell.textContent = item.alias || tagNames[key] || item.tag_name;
+
+                tagCell.ondblclick = () => {
+                  const input = document.createElement("input");
+                  input.className =
+                    "bg-gray-900 border border-gray-600 text-gray-100 w-full text-sm px-1 rounded";
+                  input.value = tagCell.textContent;
+                  tagCell.textContent = "";
+                  tagCell.appendChild(input);
+                  input.focus();
+
+                  input.onblur = async () => {
+                    const newAlias = input.value.trim() || item.tag_name;
+                    await saveTagName(item.plc_name, item.tag_name, newAlias);
+                    tagCell.textContent = newAlias;
+                  };
+
+                  input.onkeydown = (e) => {
+                    if (e.key === "Enter") input.blur();
+                  };
+                };
+
+                let calibrated = requiresDecimalFormat(item.tag_name)
+                  ? Number(item.value).toFixed(1)
+                  : item.value;
+
+                tr.innerHTML += `
+                  <td>${item.raw_value}</td>
+                  <td>${calibrated}</td>
+                  <td>${new Date(item.timestamp).toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta" })}</td>
+                `;
+
+                tr.prepend(tagCell);
+                tbody.appendChild(tr);
+              });
+
+              box.appendChild(table);
+              dashboard.appendChild(box);
+            }
+          } else {
+            lastUpdated.textContent = "No Data Available";
+          }
+        } catch (error) {
+          console.error(error);
+          document.getElementById("last-updated").textContent =
+            "Koneksi API Gagal / Server Offline!";
+          clearInterval(countdownTimer);
+        }
+      }
+
+      fetchData();
+      pollingIntervalId = setInterval(fetchData, REFRESH_INTERVAL_MS);
+    });
+  </script>
+
+</body>
+</html>
