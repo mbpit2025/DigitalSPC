@@ -40,10 +40,10 @@ export const BPMCard = ({ selectedCell, selectedModel }: CardProps) => {
     standardData["DEFAULT"];
 
     const {
-      HOT_TEMP_MIN = 0,
-      HOT_TEMP_MAX = 0,
-      COLD_TEMP_MIN = 0,
-      COLD_TEMP_MAX = 0,
+      HOT_TEMP_MIN,
+      HOT_TEMP_MAX,
+      COLD_TEMP_MIN,
+      COLD_TEMP_MAX,
     } = standards;
 
   // Filter data sesuai PLC
