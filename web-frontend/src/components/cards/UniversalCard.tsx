@@ -50,7 +50,7 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
       console.error("Fetch error:", err);
       setIsLoading(false);
     }
-  }, []);
+  }, [API_ENDPOINT]);
 
   useEffect(() => {
     fetchData();

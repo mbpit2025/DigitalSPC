@@ -8,17 +8,18 @@ import { GroupIcon,
 import { UptimeBar } from "../dashboard/Uptime";
 import { CardProps, DataPoint } from "@/types/production-standards";
 
-
 const DATA_MAP = {
     'B1-01': {
         plcId: "3", // Asumsi PLC ID 1 untuk Back Part Molding di B1-01
         hotTag: "data2", // Tag untuk Upper Temp
         coldTag: "data3", // Tag untuk Outsole Temp
+        uptime : "data26"
     },
     'B1-02': {
         plcId: "6", // Asumsi PLC ID 4 untuk Back Part Molding di B1-02
         hotTag: "data2", // Tag yang berbeda untuk Upper Temp di B1-02
-        coldTag: "data3", // Tag yang berbeda untuk Outsole Temp di B1-02
+        coldTag: "data3",
+        uptime : "data26"
     },
 };
 
@@ -57,7 +58,11 @@ export const ChillerCard = ({selectedCell, selectedModel}: CardProps) => {
   const upperTemp = filteredData.find(
     (item) => item.plc_id === config.plcId && item.tag_name === config.coldTag
   );
-  
+
+  const upTime = filteredData.find(
+    (item) => item.plc_id === config.plcId && item.tag_name === config.uptime
+  );
+  console.log({up: upTime})
 
   // Hitung status normal/abnormal
   const isHotNormal =
@@ -122,7 +127,7 @@ export const ChillerCard = ({selectedCell, selectedModel}: CardProps) => {
           >
             {overallStatus}
           </Badge>
-          <UptimeBar value={70} />
+          {!upTime ? <p className="text-orange-600">Machine Disconnected</p> : <UptimeBar value={Number((Number(upTime?.value)).toFixed(2))} />}
         </div>
         
       </div>

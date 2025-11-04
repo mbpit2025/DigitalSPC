@@ -7,7 +7,7 @@ import { useProductionSettings } from '@/hooks/useProductionSettings';
 interface LineInfoProps {
   selectedLineName: string; // Contoh: "B1-01"
   selectedModel: string | null; // Nilai model saat ini dari state Dashboard
-  onModelChange: (model: string) => void; // Fungsi untuk mengubah state model di Dashboard
+  onModelChange: (value: string) => void; // Fungsi untuk mengubah state model di Dashboard
 }
 
 export default function LineInfo({ selectedLineName, selectedModel, onModelChange }: LineInfoProps) {

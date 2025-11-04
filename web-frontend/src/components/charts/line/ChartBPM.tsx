@@ -15,7 +15,6 @@ import "@/config/chartSetup";
 import { LineAnnotation } from "@/types/chartjs";
 import { useDashboardData } from "@/context/DashboardDataContext";
 
-
 interface CellConfig {
     plcId: string;
     hot1: string; hot2: string; hot3: string; hot4: string; 
@@ -119,7 +118,7 @@ export const ChartBPM = ({ selectedCell, selectedModel, title }: CardProps) => {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const chartRef = useRef<ChartJS<'line', ChartPoint[], 'time'> | null>(null);
-  const { standardData } = useDashboardData();
+  const { standardData, counter } = useDashboardData();
 
   const config = CELL_MAP[selectedCell];
 
@@ -213,16 +212,7 @@ export const ChartBPM = ({ selectedCell, selectedModel, title }: CardProps) => {
     };
   }, [selectedCell, config, tagsToDisplay, filterRange]);
 
-  // ✅ AFTER hooks — now we check invalid config
-  if (!config) {
-    return (
-      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <p className="text-gray-600 dark:text-gray-400">
-          Invalid cell selection: {selectedCell}
-        </p>
-      </div>
-    );
-  }
+
 
     // --- FUNGSI EKSPOR ---
     const exportChartAsImage = (format: 'png' | 'jpeg') => { 
@@ -260,7 +250,6 @@ export const ChartBPM = ({ selectedCell, selectedModel, title }: CardProps) => {
         chartInstance.resetZoom();
     }
     };
-  
 
     const chartData: ChartData<"line", ChartPoint[]> = {
         datasets: tagsToDisplay.map((tag) => {
@@ -288,6 +277,18 @@ export const ChartBPM = ({ selectedCell, selectedModel, title }: CardProps) => {
 if (error) {
   return <p style={{ color: 'red', padding: '20px' }}>Error: {error}</p>;
 }
+
+  // ✅ AFTER hooks — now we check invalid config
+  if (!config) {
+    return (
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <p className="text-gray-600 dark:text-gray-400">
+          Invalid cell selection: {selectedCell} : {counter}
+        </p>
+      </div>
+    );
+  }
+  
   const hasData = Object.values(dataHistory).some(arr => arr.length > 0);
     return (
         <div className='rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] flex flex-col justify-between col-span-12 lg:col-span-4 ' >

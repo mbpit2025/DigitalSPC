@@ -4,11 +4,12 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { Line } from "react-chartjs-2";
 import { ChartData } from "chart.js";
 import "chartjs-adapter-date-fns";
-import { CardProps, DataPoint } from "@/types/production-standards";
+import { CardProps } from "@/types/production-standards";
 import { getRealtimeChartOptions } from "@/config/chartOptions";
 import "@/config/chartSetup";
 import { useDashboardData } from "@/context/DashboardDataContext";
 import { LineAnnotation } from "@/types/chartjs";
+import { RowDataPacket } from "mysql2";
 
 
 interface ChartPoint {
@@ -113,7 +114,7 @@ if (!standards) return {} as Record<string, LineAnnotation>;
         setDataHistory((prev) => {
           const updated = { ...prev };
 
-          json.forEach((row: any) => {
+          json.forEach((row: RowDataPacket) => {
             if (!tagsToDisplay.includes(row.tagname)) return;
 
             const newPoint: ChartPoint = {
@@ -150,7 +151,7 @@ if (!standards) return {} as Record<string, LineAnnotation>;
   if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
 
   return (
-    <div className="rounded-2xl border p-5">
+    <div className='rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] flex flex-col justify-between col-span-12 lg:col-span-4 ' >
       {loading ? <p>Loading chart...</p> : <Line ref={chartRef} data={chartData} options={options} />}
     </div>
   );

@@ -12,6 +12,7 @@ export const getRealtimeChartOptions = (
       text: chartTitle,
     },
     annotation: {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       annotations: annotationLines as any,
     },
   },

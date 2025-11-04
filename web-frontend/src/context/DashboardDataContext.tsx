@@ -19,7 +19,7 @@ interface DashboardDataContextProps {
 const DashboardDataContext =
   createContext<DashboardDataContextProps | null>(null);
 
-const REFRESH_INTERVAL = 10;
+const REFRESH_INTERVAL = 2;
 
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<DataPoint[]>([]);

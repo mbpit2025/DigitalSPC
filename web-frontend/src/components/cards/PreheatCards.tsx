@@ -13,11 +13,15 @@ const DATA_MAP = {
         plcId: "2", // Asumsi PLC ID 1 untuk Back Part Molding di Cell 1
         hotTag: "data2", // Tag untuk Upper Temp
         coldTag: "data3", // Tag untuk Outsole Temp
+        uptime: "data26"
+
     },
     'B1-02': {
         plcId: "5", // Asumsi PLC ID 4 untuk Back Part Molding di Cell 2
         hotTag: "data2", // Tag yang berbeda untuk Upper Temp di Cell 2
         coldTag: "data3", // Tag yang berbeda untuk Outsole Temp di Cell 2
+        uptime: "data26"
+
     },
 };
 
@@ -56,6 +60,10 @@ export const PreHeatCard = ({ selectedCell, selectedModel }: CardProps) => {
   );
   const upperTemp = filteredData.find(
     (item) => item.plc_id === config.plcId && item.tag_name === config.coldTag
+  );
+
+  const upTime = filteredData.find(
+    (item) => item.plc_id === config.plcId && item.tag_name === config.uptime
   );
 
 
@@ -127,7 +135,7 @@ export const PreHeatCard = ({ selectedCell, selectedModel }: CardProps) => {
           >
             {overallStatus}
           </Badge>
-          <UptimeBar value={70} />
+          {!upTime ? <p className="text-orange-600">Machine Disconnected</p> : <UptimeBar value={Number((Number(upTime?.value)).toFixed(2))} />}
         </div>
 
       </div>

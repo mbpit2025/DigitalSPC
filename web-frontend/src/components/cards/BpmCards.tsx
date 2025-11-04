@@ -11,11 +11,13 @@ const BPM_CELL_MAP = {
     plcId: "1",
     hotTag: "data2",
     coldTag: "data5",
+    uptime: "data26"
   },
   "B1-02": {
     plcId: "4",
     hotTag: "data2",
     coldTag: "data5",
+    uptime: "data26"
   },
 };
 
@@ -37,7 +39,12 @@ export const BPMCard = ({ selectedCell, selectedModel }: CardProps) => {
     (selectedModel && standardData[selectedModel]) ||
     standardData["DEFAULT"];
 
-  const { HOT_TEMP_MIN, HOT_TEMP_MAX, COLD_TEMP_MIN, COLD_TEMP_MAX } = standards;
+    const {
+      HOT_TEMP_MIN = 0,
+      HOT_TEMP_MAX = 0,
+      COLD_TEMP_MIN = 0,
+      COLD_TEMP_MAX = 0,
+    } = standards;
 
   // Filter data sesuai PLC
   const filteredData: DataPoint[] = data.filter((item) =>
@@ -50,6 +57,11 @@ export const BPMCard = ({ selectedCell, selectedModel }: CardProps) => {
   const coldTemp = filteredData.find(
     (item) => item.plc_id === config.plcId && item.tag_name === config.coldTag
   );
+
+    const upTime = filteredData.find(
+    (item) => item.plc_id === config.plcId && item.tag_name === config.uptime
+  );
+
 
   // Hitung status normal/abnormal
   const isHotNormal =
@@ -116,7 +128,7 @@ export const BPMCard = ({ selectedCell, selectedModel }: CardProps) => {
           >
             {overallStatus}
           </Badge>
-          <UptimeBar value={70} />
+          {!upTime ? <p className="text-orange-600">Machine Disconnected</p> : <UptimeBar value={Number((Number(upTime?.value)).toFixed(2))} />}
         </div>
       </div>
     </div>

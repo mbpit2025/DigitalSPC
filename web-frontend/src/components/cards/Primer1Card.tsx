@@ -14,11 +14,13 @@ const DATA_MAP = {
         plcId: "2", // Asumsi PLC ID 1 untuk Back Part Molding di B1-01
         hotTag: "data4", // Tag untuk Upper Temp
         coldTag: "data5", // Tag untuk Outsole Temp
+        uptime: "data26"
     },
     'B1-02': {
         plcId: "5", // Asumsi PLC ID 4 untuk Back Part Molding di B1-02
         hotTag: "data4", // Tag yang berbeda untuk Upper Temp di B1-02
         coldTag: "data5", // Tag yang berbeda untuk Outsole Temp di B1-02
+        uptime: "data26"
     },
 };
 
@@ -59,6 +61,10 @@ export const Primer1Card = ({selectedCell, selectedModel} : CardProps) => {
   );
   const upperTemp = filteredData.find(
     (item) => item.plc_id === config.plcId && item.tag_name === config.coldTag
+  );
+
+  const upTime = filteredData.find(
+    (item) => item.plc_id === config.plcId && item.tag_name === config.uptime
   );
 
   // Hitung status normal/abnormal
@@ -126,7 +132,7 @@ export const Primer1Card = ({selectedCell, selectedModel} : CardProps) => {
           >
             {overallStatus}
           </Badge>
-          <UptimeBar value={70} />
+          {!upTime ? <p className="text-orange-600">Machine Disconnected</p> : <UptimeBar value={Number((Number(upTime?.value)).toFixed(2))} />}
         </div>
 
       </div>

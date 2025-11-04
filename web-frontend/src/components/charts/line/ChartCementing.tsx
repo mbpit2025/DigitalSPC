@@ -116,15 +116,6 @@ export const ChartCementing = ({selectedCell, selectedModel, title}: CardProps) 
 
 
   const config = CELL_MAP[selectedCell];
-  if (!config) {
-    return (
-      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-        <p className="text-gray-600 dark:text-gray-400">
-          Invalid cell selection: {selectedCell}
-        </p>
-      </div>
-    );
-  }
 
   const tagsToDisplay = useMemo(() => {
     if (!config) return [];
@@ -274,7 +265,17 @@ export const ChartCementing = ({selectedCell, selectedModel, title}: CardProps) 
     return getRealtimeChartOptions(dynamicTitle, annotationLines);
     }, [title, selectedCell, selectedModel, createAnnotations]);
 
-    if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
+  if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
+
+    if (!config) {
+    return (
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <p className="text-gray-600 dark:text-gray-400">
+          Invalid cell selection: {selectedCell}
+        </p>
+      </div>
+    );
+  }
 
   const hasData = Object.values(dataHistory).some((arr) => arr.length > 0);
 
