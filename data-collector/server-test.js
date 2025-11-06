@@ -8,7 +8,7 @@ const net = require("net");
 const { DateTime } = require("luxon");
 const { calibrate } = require("./services/calibration");
 
-const { PLCS, DATA_POINTS_MAP } = require("./config");
+const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("./config");
 const { saveHistoricalData } = require("./database/db-client");
 
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
@@ -195,19 +195,18 @@ async function pollingLoop() {
     storeLatestData(all);
   }
 
-  setTimeout(pollingLoop, 1000);
+  setTimeout(pollingLoop, POLLING_INTERVAL);
 }
 
 // ============================================================
 // HTTP SERVER
 // ============================================================
 const server = http.createServer((req, res) => {
-  const parsed = url.parse(req.url, true);
+  const parsed = new URL(req.url, `http://${req.headers.host}`);
 
-  // ✅ latest data API
   if (req.method === "GET" && parsed.pathname === "/api/latest-data") {
     const aliases = loadAliases();
-    const merged = latestDataStore.map((d) => ({
+    const merged = latestDataStore.map(d => ({
       ...d,
       alias: aliases[`${d.plc_name}_${d.tag_name}`] || "",
     }));
@@ -223,16 +222,15 @@ const server = http.createServer((req, res) => {
     }));
   }
 
-  // ✅ update alias
   if (req.method === "POST" && parsed.pathname === "/api/update-alias") {
     let body = "";
-    req.on("data", (c) => (body += c));
+    req.on("data", c => body += c);
     req.on("end", () => {
       try {
         const { plc_name, tag_name, alias } = JSON.parse(body);
         if (!plc_name || !tag_name) {
           res.writeHead(400);
-          return res.end(`Missing fields`);
+          return res.end("Missing fields");
         }
 
         const aliases = loadAliases();
@@ -240,22 +238,21 @@ const server = http.createServer((req, res) => {
         saveAliases(aliases);
 
         res.writeHead(200);
-        return res.end(`ok`);
+        return res.end("ok");
       } catch {
         res.writeHead(500);
-        return res.end(`invalid json`);
+        return res.end("invalid json");
       }
     });
     return;
   }
 
-  // ✅ API cek koneksi
   if (req.method === "GET" && parsed.pathname === "/api/connection-status") {
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(JSON.stringify({
       status: "success",
       timestamp: new Date().toISOString(),
-      data: plcClients.map((p) => ({
+      data: plcClients.map(p => ({
         plc_id: p.id,
         plc_name: p.name,
         ip: p.ip,
@@ -267,13 +264,11 @@ const server = http.createServer((req, res) => {
     }));
   }
 
-  // ✅ halaman dashboard
   if (req.method === "GET" && parsed.pathname === "/") {
     res.writeHead(200, { "Content-Type": "text/html" });
     return res.end(HTML_TEMPLATE);
   }
 
-  // ✅ halaman connection-test.html
   if (req.method === "GET" && parsed.pathname === "/connection") {
     if (!fs.existsSync(CONNECTION_PAGE)) {
       res.writeHead(404);
@@ -288,6 +283,7 @@ const server = http.createServer((req, res) => {
   res.writeHead(404, { "Content-Type": "text/plain" });
   res.end("Not Found");
 });
+
 
 server.listen(API_PORT, () => {
   console.log(`✅ SERVER JALAN DI http://localhost:${API_PORT}`);

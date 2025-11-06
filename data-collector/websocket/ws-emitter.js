@@ -1,6 +1,4 @@
 // data-collector/websocket/ws-emitter.js
-const fetch = require("node-fetch");
-
 
 async function pushLatestData(payload) {
   try {

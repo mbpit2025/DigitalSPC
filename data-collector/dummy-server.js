@@ -212,7 +212,7 @@ async function pollingLoop() {
 
   try {
     await saveHistoricalData(data);
-    console.log(`[DUMMY] Menyimpan setiap ${POLLING_INTERVAL / 1000}s`);
+    console.log(`[DUMMY] Menyimpan setiap ${POLLING_INTERVAL / POLLING_INTERVAL}s`);
   } catch (err) {
     console.error("[DUMMY ERROR] Gagal menyimpan data:", err);
   }
