@@ -1,7 +1,9 @@
-import McPage from "./LogPage";
+import React from 'react'
 
-export default async function Page({ params }: { params: { plcName: string } }) {
-
-  const {plcName} = await params;
-  return <McPage plcName={params.plcName} />;
+function LogPageMC() {
+  return (
+    <div>LogPageMC</div>
+  )
 }
+
+export default LogPageMC

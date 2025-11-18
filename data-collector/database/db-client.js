@@ -15,7 +15,7 @@ const pool =
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    port: 3307,
+    port: 3306,
   });
 
 if (!globalForMySQL._mysqlPool) {

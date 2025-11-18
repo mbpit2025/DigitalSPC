@@ -14,6 +14,26 @@ const { saveHistoricalData } = require("./database/db-client");
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
 const API_PORT = 3001;
 
+// --- PENAMBAHAN FUNGSI JEDA (DELAY) ---
+const DELAY_BETWEEN_PLCS_MS = 200; // Jeda 200ms antara pengambilan data PLC
+
+/**
+ * @function delay
+ * @description Membuat jeda asinkron
+ * @param {number} ms - Jumlah milidetik untuk jeda
+ */
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+// -
+
+// Inisialisasi klien Modbus untuk setiap PLC
+const clients = PLCS.map((plc) => {
+  const client = new ModbusRTU();
+  client.setTimeout(5000); // timeout 5 detik
+  return { ...plc, client, isConnected: false };
+});
+
 // ============================================================
 // FILE FRONTEND
 // ============================================================
@@ -128,19 +148,19 @@ async function periodicCheck() {
 // KONEKSI MODBUS + POLLING
 // ============================================================
 async function connectAllPlcs() {
-  const promises = plcClients.map(async (plc) => {
+  console.log("[PLC] Mencoba koneksi awal ke PLC...");
+  const connectionPromises = clients.map(async (plc) => {
     try {
-      if (plc.unitId !== undefined) plc.client.setID(String(plc.unitId));
+      plc.client.setID(String(plc.unitId));
       await plc.client.connectTCP(plc.ip, { port: plc.port });
       plc.isConnected = true;
-      console.log(`[PLC OK] ${plc.name}`);
-    } catch (err) {
+      console.log(`[PLC SUCCESS] Terhubung ke ${plc.name} (${plc.ip}:${plc.port})`);
+    } catch (e) {
       plc.isConnected = false;
-      console.log(`[PLC FAIL] ${plc.name}: ${err.message}`);
+      console.error(`[PLC ERROR] Gagal terhubung ke ${plc.name} (${plc.ip}): ${e.message}`);
     }
   });
-
-  await Promise.allSettled(promises);
+  await Promise.allSettled(connectionPromises);
 }
 
 async function readAndProcess(plc) {
@@ -184,18 +204,31 @@ async function readAndProcess(plc) {
 
 async function pollingLoop() {
   const all = [];
-  const results = await Promise.allSettled(plcClients.map(readAndProcess));
 
-  for (const r of results) {
-    if (r.status === "fulfilled") all.push(...r.value);
-  }
+ for (const plc of plcClients) {
+        // 1. Ambil data dari satu PLC, tunggu hasilnya
+        const results = await readAndProcess(plc);
 
-  if (all.length > 0) {
-    await saveHistoricalData(all);
-    storeLatestData(all);
-  }
+        if (results.length > 0) {
+            all.push(...results);
+        }
 
-  setTimeout(pollingLoop, POLLING_INTERVAL);
+        // 2. Sisipkan jeda (delay) sebelum membaca PLC berikutnya
+        // Cek apakah ini BUKAN PLC terakhir dalam array
+        if (plcClients.indexOf(plc) < plcClients.length - 1) {
+            await delay(DELAY_BETWEEN_PLCS_MS);
+        }
+    }
+    // --- AKHIR LOGIKA POLLING BERURUTAN ---
+    
+    // Logika penyimpanan data tetap sama (hanya berjalan setelah SEMUA PLC selesai diproses)
+    if (all.length > 0) {
+        // Asumsi saveHistoricalData adalah async
+        await saveHistoricalData(all); 
+        storeLatestData(all);
+    }
+
+    setTimeout(pollingLoop, POLLING_INTERVAL);
 }
 
 // ============================================================

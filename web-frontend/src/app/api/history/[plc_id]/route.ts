@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { dbQuery, PlcData } from '@/app/lib/db';
+import { dbQuery } from '@/app/lib/db';
 
 export async function GET(request: Request, { params }: { params: Promise<{ plc_id: string }> }) {
   try {

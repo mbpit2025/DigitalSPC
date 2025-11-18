@@ -258,7 +258,7 @@ async function readAndProcess(plc) {
         displayValue = Number((calibratedValue / 10).toFixed(1));
       }
 
-      console.log(`[KALIBRASI DEBUG] PLC=${plc.name} (${plc.id}) Tag=${point.tag_name} Raw=${rawValue} Processed=${rawValue} Calibrated=${displayValue}`);
+      // console.log(`[KALIBRASI DEBUG] PLC=${plc.name} (${plc.id}) Tag=${point.tag_name} Raw=${rawValue} Processed=${rawValue} Calibrated=${displayValue}`);
 
 
       dataFromPlc.push({
