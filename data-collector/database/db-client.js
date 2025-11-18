@@ -3,55 +3,25 @@ const { DateTime } = require("luxon");
 
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
 
-
-// ✅ cek koneksi port
-async function selectAvailablePort() {
-  const test = async (port) => {
-    try {
-      const conn = await mysql.createConnection({
-        host: "localhost",
-        user: "root",
-        password: "",
-        database: "mmspwi2",
-        port,
-      });
-      await conn.query("SELECT 1");
-      await conn.end();
-      console.log(`✅ MySQL OK di port ${port}`);
-      return true;
-    } catch {
-      console.log(`❌ MySQL GAGAL di port ${port}`);
-      return false;
-    }
-  };
-
-  if (await test(3306)) return 3306;
-  if (await test(3307)) return 3307;
-
-  throw new Error("🚨 Tidak bisa konek MySQL di 3306 atau 3307!");
-}
-
-// ✅ singleton pool
+// 🔒 Gunakan singleton agar pool tidak dibuat berulang kali
 const globalForMySQL = globalThis;
-let poolPromise =
-  globalForMySQL._mysqlPoolPromise ||
-  (globalForMySQL._mysqlPoolPromise = (async () => {
-    const port = await selectAvailablePort();
+const pool =
+  globalForMySQL._mysqlPool ||
+  mysql.createPool({
+    host: "localhost",
+    user: "root",
+    password: "",
+    database: "mmspwi2",
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    port: 3307,
+  });
 
-    const pool = mysql.createPool({
-      host: "localhost",
-      user: "root",
-      password: "",
-      database: "mmspwi2",
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      port,
-    });
-
-    console.log(`[DB] Pool MySQL dibuat di port ${port} (singleton).`);
-    return pool;
-  })());
+if (!globalForMySQL._mysqlPool) {
+  globalForMySQL._mysqlPool = pool;
+  console.log("[DB] Pool MySQL dibuat (singleton).");
+}
 
 // -------------------------------------------------------------
 // ✅ Simpan Data Mentah (lebih efisien & aman)

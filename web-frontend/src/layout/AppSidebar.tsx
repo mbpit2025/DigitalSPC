@@ -10,7 +10,7 @@ import {
   ChevronDownIcon,
   GridIcon,
   HorizontaLDots,
-  // ListIcon,
+  ListIcon,
   // PageIcon,
   PieChartIcon,
   // PlugInIcon,
@@ -49,11 +49,18 @@ const navItems: NavItem[] = [
   //   path: "/dashboard/profile",
   // },
 
-  // {
-  //   name: "Forms",
-  //   icon: <ListIcon />,
-  //   subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  // },
+  {
+    name: "Line 1 MC",
+    icon: <ListIcon />,
+    subItems: [
+      { name: "BPM", path: "/", pro: false },
+      { name: "Pre Heating", path: "/", pro: false },
+      { name: "Primer 1 / Cleaning", path: "/", pro: false },
+      { name: "Primer 2", path: "/", pro: false },
+      { name: "Cementing", path: "/", pro: false },
+      { name: "Chiller", path: "/", pro: false },
+    ],
+  },
   // {
   //   name: "Tables",
   //   icon: <TableIcon />,
