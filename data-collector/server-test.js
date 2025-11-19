@@ -1,43 +1,52 @@
-// server.js
+// ============================================================
+// DEPENDENCIES
+// ============================================================
 const ModbusRTU = require("modbus-serial");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const url = require("url");
 const net = require("net");
 const { DateTime } = require("luxon");
-const { calibrate } = require("./services/calibration");
 
 const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("./config");
+const { calibrate } = require("./services/calibration");
 const { saveHistoricalData } = require("./database/db-client");
 
-const JAKARTA_TIMEZONE = "Asia/Jakarta";
+// ============================================================
 const API_PORT = 3001;
+const JAKARTA_TIMEZONE = "Asia/Jakarta";
+const DELAY_BETWEEN_PLCS_MS = 200;
 
-// --- PENAMBAHAN FUNGSI JEDA (DELAY) ---
-const DELAY_BETWEEN_PLCS_MS = 200; // Jeda 200ms antara pengambilan data PLC
-
-/**
- * @function delay
- * @description Membuat jeda asinkron
- * @param {number} ms - Jumlah milidetik untuk jeda
- */
+// ============================================================
+// UTILS
+// ============================================================
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
-// -
 
-// Inisialisasi klien Modbus untuk setiap PLC
-const clients = PLCS.map((plc) => {
+// ============================================================
+// SINGLE PLC LIST (FIXED VERSION)
+// ============================================================
+const plcList = PLCS.map(plc => {
   const client = new ModbusRTU();
-  client.setTimeout(5000); // timeout 5 detik
-  return { ...plc, client, isConnected: false };
+  client.setTimeout(2000);
+
+  client.on("error", () => {});
+  if (client._client) client._client.on("error", () => {});
+
+  return {
+    ...plc,
+    client,
+    isConnected: false,
+    lastLatency: null,
+    lastCheckTime: null
+  };
 });
 
 // ============================================================
-// FILE FRONTEND
+// FRONTEND FILES
 // ============================================================
-const DASHBOARD_FILE = path.join(__dirname,"public", "data.html");
+const DASHBOARD_FILE = path.join(__dirname, "public", "data.html");
 const ALIAS_FILE = path.join(__dirname, "alias.json");
 const CONNECTION_PAGE = path.join(__dirname, "public", "connection-test.html");
 
@@ -47,7 +56,7 @@ if (!fs.existsSync(ALIAS_FILE))
 function loadAliases() {
   try {
     return JSON.parse(fs.readFileSync(ALIAS_FILE, "utf8"));
-  } catch (e) {
+  } catch {
     return {};
   }
 }
@@ -56,49 +65,17 @@ function saveAliases(data) {
   fs.writeFileSync(ALIAS_FILE, JSON.stringify(data, null, 2), "utf8");
 }
 
-// ============================================================
-// LOAD DASHBOARD
-// ============================================================
-let HTML_TEMPLATE;
+let HTML_TEMPLATE = "<h1>Dashboard Missing</h1>";
 try {
   HTML_TEMPLATE = fs.readFileSync(DASHBOARD_FILE, "utf8");
-} catch {
-  HTML_TEMPLATE = "<h1>Dashboard file missing!</h1>";
-}
+} catch {}
+
 
 // ============================================================
-// CLIENT MODBUS + ANTI CRASH SOCKET
-// ============================================================
-const plcClients = PLCS.map((plc) => {
-  const client = new ModbusRTU();
-  client.setTimeout(2000);
-
-  // Hindari crash saat timeout/error
-  client.on("error", () => {});
-  if (client._client) client._client.on("error", () => {});
-
-  return {
-    ...plc,
-    client,
-    isConnected: false,
-    lastLatency: null,
-    lastCheckTime: null,
-  };
-});
-
-let latestDataStore = [];
-let lastUpdateTimestamp = null;
-
-function storeLatestData(data) {
-  latestDataStore = data;
-  lastUpdateTimestamp = DateTime.now().setZone(JAKARTA_TIMEZONE).toISO();
-}
-
-// ============================================================
-// TEST KONEKSI PLC (FAST CHECK)
+// TEST KONEKSI (FAST SOCKET CHECK)
 // ============================================================
 async function testConnection(plc) {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const start = Date.now();
     const socket = new net.Socket();
     let done = false;
@@ -113,151 +90,154 @@ async function testConnection(plc) {
       plc.isConnected = true;
       plc.lastLatency = Date.now() - start;
       plc.lastCheckTime = new Date().toISOString();
-
       resolve();
     });
 
     socket.on("timeout", () => {
       if (done) return;
       done = true;
-      socket.destroy();
+
       plc.isConnected = false;
       plc.lastLatency = null;
       plc.lastCheckTime = new Date().toISOString();
+      socket.destroy();
       resolve();
     });
 
     socket.on("error", () => {
       if (done) return;
       done = true;
-      socket.destroy();
+
       plc.isConnected = false;
       plc.lastLatency = null;
       plc.lastCheckTime = new Date().toISOString();
+      socket.destroy();
       resolve();
     });
   });
 }
 
 async function periodicCheck() {
-  for (const plc of plcClients) await testConnection(plc);
+  for (const plc of plcList) {
+    await testConnection(plc);
+  }
   setTimeout(periodicCheck, 10000);
 }
 
+
 // ============================================================
-// KONEKSI MODBUS + POLLING
+// CONNECT ALL MODBUS CLIENTS
 // ============================================================
-async function connectAllPlcs() {
-  console.log("[PLC] Mencoba koneksi awal ke PLC...");
-  const connectionPromises = clients.map(async (plc) => {
-    try {
-      plc.client.setID(String(plc.unitId));
-      await plc.client.connectTCP(plc.ip, { port: plc.port });
-      plc.isConnected = true;
-      console.log(`[PLC SUCCESS] Terhubung ke ${plc.name} (${plc.ip}:${plc.port})`);
-    } catch (e) {
-      plc.isConnected = false;
-      console.error(`[PLC ERROR] Gagal terhubung ke ${plc.name} (${plc.ip}): ${e.message}`);
-    }
-  });
-  await Promise.allSettled(connectionPromises);
+async function connectModbus(plc) {
+  try {
+    plc.client.setID(Number(plc.unitId));
+    await plc.client.connectTCP(plc.ip, { port: plc.port });
+
+    plc.isConnected = true;
+    console.log(`[PLC CONNECTED] ${plc.name} (${plc.ip})`);
+  } catch (err) {
+    plc.isConnected = false;
+    console.log(`[PLC ERROR] ${plc.name}: ${err.message}`);
+  }
 }
 
+async function connectAllPlcs() {
+  console.log("[PLC] Connecting...");
+  for (const plc of plcList) await connectModbus(plc);
+}
+
+
+// ============================================================
+// MODBUS POLLING
+// ============================================================
 async function readAndProcess(plc) {
   if (!plc.isConnected) return [];
 
   try {
-    const START_REGISTER = DATA_POINTS_MAP[0].register;
-    const TOTAL_COUNT = DATA_POINTS_MAP.length;
-    const response = await plc.client.readHoldingRegisters(START_REGISTER, TOTAL_COUNT);
+    const START = DATA_POINTS_MAP[0].register;
+    const COUNT = DATA_POINTS_MAP.length;
 
-    const values = response.data || [];
+    const res = await plc.client.readHoldingRegisters(START, COUNT);
+    const values = res.data || [];
+
+    plc.isConnected = true; // Update status (FIX)
     const timestamp = DateTime.now().setZone(JAKARTA_TIMEZONE).toISO();
-    const results = [];
+    const result = [];
 
-    DATA_POINTS_MAP.forEach((point, i) => {
-      const rawValue = values[i];
-      if (rawValue == null) return;
+    DATA_POINTS_MAP.forEach((p, idx) => {
+      const raw = values[idx];
+      if (raw == null) return;
 
-      let calibrated = calibrate(String(plc.id), point.tag_name, rawValue);
+      let calibrated = calibrate(String(plc.id), p.tag_name, raw);
+      if (idx >= 1 && idx <= 8) calibrated = Number((calibrated / 10).toFixed(1));
 
-      let displayValue = calibrated;
-      if (i >= 1 && i <= 8) displayValue = Number((calibrated / 10).toFixed(1));
-
-      results.push({
+      result.push({
         plc_id: String(plc.id),
         plc_name: plc.name,
-        tag_name: point.tag_name,
-        raw_value: rawValue,
-        value: displayValue,
-        timestamp,
+        tag_name: p.tag_name,
+        raw_value: raw,
+        value: calibrated,
+        timestamp
       });
     });
 
-    return results;
+    return result;
 
-  } catch (err) {
+  } catch (e) {
     plc.isConnected = false;
     return [];
   }
 }
 
+let latestDataStore = [];
+let lastUpdateTimestamp = null;
+
+function storeLatestData(data) {
+  latestDataStore = data;
+  lastUpdateTimestamp = DateTime.now().setZone(JAKARTA_TIMEZONE).toISO();
+}
+
 async function pollingLoop() {
   const all = [];
 
- for (const plc of plcClients) {
-        // 1. Ambil data dari satu PLC, tunggu hasilnya
-        const results = await readAndProcess(plc);
+  for (const plc of plcList) {
+    const result = await readAndProcess(plc);
+    if (result.length > 0) all.push(...result);
 
-        if (results.length > 0) {
-            all.push(...results);
-        }
+    await delay(DELAY_BETWEEN_PLCS_MS);
+  }
 
-        // 2. Sisipkan jeda (delay) sebelum membaca PLC berikutnya
-        // Cek apakah ini BUKAN PLC terakhir dalam array
-        if (plcClients.indexOf(plc) < plcClients.length - 1) {
-            await delay(DELAY_BETWEEN_PLCS_MS);
-        }
-    }
-    // --- AKHIR LOGIKA POLLING BERURUTAN ---
-    
-    // Logika penyimpanan data tetap sama (hanya berjalan setelah SEMUA PLC selesai diproses)
-    if (all.length > 0) {
-        // Asumsi saveHistoricalData adalah async
-        await saveHistoricalData(all); 
-        storeLatestData(all);
-    }
+  if (all.length > 0) {
+    await saveHistoricalData(all);
+    storeLatestData(all);
+  }
 
-    setTimeout(pollingLoop, POLLING_INTERVAL);
+  setTimeout(pollingLoop, POLLING_INTERVAL);
 }
 
+
 // ============================================================
-// HTTP SERVER
+// HTTP SERVER (API)
 // ============================================================
 const server = http.createServer((req, res) => {
   const parsed = new URL(req.url, `http://${req.headers.host}`);
 
-  if (req.method === "GET" && parsed.pathname === "/api/latest-data") {
+  // API: latest-data
+  if (parsed.pathname === "/api/latest-data") {
     const aliases = loadAliases();
     const merged = latestDataStore.map(d => ({
       ...d,
-      alias: aliases[`${d.plc_name}_${d.tag_name}`] || "",
+      alias: aliases[`${d.plc_name}_${d.tag_name}`] || ""
     }));
 
-    res.writeHead(200, {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    });
-    return res.end(JSON.stringify({
-      status: "success",
-      timestamp: lastUpdateTimestamp,
-      data: merged,
-    }));
+    res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+    return res.end(JSON.stringify({ status: "success", timestamp: lastUpdateTimestamp, data: merged }));
   }
 
-  if (req.method === "POST" && parsed.pathname === "/api/update-alias") {
+  // API Update Alias
+  if (parsed.pathname === "/api/update-alias" && req.method === "POST") {
     let body = "";
-    req.on("data", c => body += c);
+    req.on("data", chunk => (body += chunk));
     req.on("end", () => {
       try {
         const { plc_name, tag_name, alias } = JSON.parse(body);
@@ -274,35 +254,38 @@ const server = http.createServer((req, res) => {
         return res.end("ok");
       } catch {
         res.writeHead(500);
-        return res.end("invalid json");
+        return res.end("Invalid JSON");
       }
     });
     return;
   }
 
-  if (req.method === "GET" && parsed.pathname === "/api/connection-status") {
+  // API: connection-status
+  if (parsed.pathname === "/api/connection-status") {
     res.writeHead(200, { "Content-Type": "application/json" });
     return res.end(JSON.stringify({
       status: "success",
       timestamp: new Date().toISOString(),
-      data: plcClients.map(p => ({
+      data: plcList.map(p => ({
         plc_id: p.id,
         plc_name: p.name,
         ip: p.ip,
         port: p.port,
         isConnected: p.isConnected,
         latency: p.lastLatency,
-        lastCheckTime: p.lastCheckTime,
-      })),
+        lastCheckTime: p.lastCheckTime
+      }))
     }));
   }
 
-  if (req.method === "GET" && parsed.pathname === "/") {
+  // Dashboard
+  if (parsed.pathname === "/") {
     res.writeHead(200, { "Content-Type": "text/html" });
     return res.end(HTML_TEMPLATE);
   }
 
-  if (req.method === "GET" && parsed.pathname === "/connection") {
+  // Connection Page
+  if (parsed.pathname === "/connection") {
     if (!fs.existsSync(CONNECTION_PAGE)) {
       res.writeHead(404);
       return res.end("connection-test.html NOT FOUND");
@@ -313,13 +296,16 @@ const server = http.createServer((req, res) => {
     return res.end(html);
   }
 
-  res.writeHead(404, { "Content-Type": "text/plain" });
+  res.writeHead(404);
   res.end("Not Found");
 });
 
 
+// ============================================================
+// START SERVER
+// ============================================================
 server.listen(API_PORT, () => {
-  console.log(`✅ SERVER JALAN DI http://localhost:${API_PORT}`);
+  console.log(`🚀 SERVER RUNNING → http://localhost:${API_PORT}`);
   periodicCheck();
   connectAllPlcs();
   pollingLoop();
