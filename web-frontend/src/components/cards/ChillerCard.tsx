@@ -62,7 +62,6 @@ export const ChillerCard = ({selectedCell, selectedModel}: CardProps) => {
   const upTime = filteredData.find(
     (item) => item.plc_id === config.plcId && item.tag_name === config.uptime
   );
-  console.log({up: upTime})
 
   // Hitung status normal/abnormal
   const isHotNormal =

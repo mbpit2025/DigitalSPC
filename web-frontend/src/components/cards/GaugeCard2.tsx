@@ -17,13 +17,13 @@ interface DataPoint {
 
 const DATA_MAP = {
   "B1-01": {
-    plc_name: "GAUGE MARKING_B1-01 RIGHT",
-    tag_name: "data_tag_1",
+    plc_name: "GAUGE MARKING_B1-02 RIGHT",
+    tag_name: "data_tag_7",
     time: "data_tag_2",
   },
   "B1-02": {
-    plc_name: "GAUGE MARKING_B1-01 LEFT",
-    tag_name: "data_tag_3",
+    plc_name: "GAUGE MARKING_B1-02 LEFT",
+    tag_name: "data_tag_5",
     time: "data_tag_4",
   },
 };
@@ -44,15 +44,18 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
   const selectedPlcIds = config ? [config.plc_name] : [];
 
   const fetchData = async () => {
+
     try {
-      const res = await fetch(`http://10.2.11.4:6060/api/get_pressure_data`, {
-        cache: "no-store",
-      });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/get_pressure_data`, {
+      cache: "no-store",
+    });
 
       const json = await res.json();
       const dataArray: DataPoint[] = Array.isArray(json)
         ? json
         : json.data || [];
+
+      console.log(dataArray)
 
       setDataPwi(dataArray);
       setIsLoading(false);
