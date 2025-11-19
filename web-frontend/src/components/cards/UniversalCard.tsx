@@ -17,12 +17,12 @@ interface DataPoint {
 
 const DATA_MAP = {
   "B1-01": {
-    plc_name: "UNIVERSAL_PRESS_B1-02 RIGHT",
-    tag_name: "data_tag_7",
+    plc_name: "UNIVERSAL PRESS_B1-02 RIGHT",
+    tag_name: "data_tag_8",
     time: "data_tag_6",
   },
   "B1-02": {
-    plc_name: "UNIVERSAL_PRESS_B1-02 LEFT",
+    plc_name: "UNIVERSAL PRESS_B1-02 LEFT",
     tag_name: "data_tag_6",
     time: "data_tag_9",
   },
@@ -36,7 +36,7 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
   // ✅ Hooks dulu, jangan return dulu
   const config = DATA_MAP[selectedCell];
   const selectedPlcIds = config ? [config.plc_name] : [];
-  const API_ENDPOINT = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/get_pressure_data`;
+  const API_ENDPOINT = `http://10.2.11.4:6060/api/get_pressure_data`;
 
   const fetchData = useCallback(async () => {
     try {

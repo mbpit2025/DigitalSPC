@@ -1,0 +1,59 @@
+[DB] Pool MySQL dibuat (singleton).
+🚀 SERVER RUNNING → http://localhost:3001
+[PLC] Connecting...
+[PLC CONNECTED] BPM_LINE_1 (10.2.13.74)
+[PLC CONNECTED] HEATING_LINE_1 (10.2.13.75)
+[PLC CONNECTED] CHILLER_LINE_1 (10.2.13.76)
+[PLC ERROR] BPM_LINE_2: TCP Connection Timed Out
+[PLC CONNECTED] HEATING_LINE_2 (10.2.13.78)
+[PLC ERROR] CHILLER_LINE_2: TCP Connection Timed Out
+[DB] 104 baris disimpan ke plc_data.
+[DB] 104 baris disimpan ke plc_data.
+[DB] 104 baris disimpan ke plc_data.
+[DB] 78 baris disimpan ke plc_data.
+[DB] 26 baris disimpan ke plc_data.
+[DB] Pool MySQL dibuat (singleton).
+🚀 SERVER RUNNING → http://localhost:3001
+[PLC] Connecting...
+[PLC ERROR] BPM_LINE_1: TCP Connection Timed Out
+[PLC ERROR] HEATING_LINE_1: TCP Connection Timed Out
+[PLC ERROR] CHILLER_LINE_1: TCP Connection Timed Out
+[DB] Pool MySQL dibuat (singleton).
+🚀 SERVER RUNNING → http://localhost:3001
+[PLC] Connecting...
+[PLC ERROR] BPM_LINE_1: TCP Connection Timed Out
+[PLC ERROR] HEATING_LINE_1: TCP Connection Timed Out
+[PLC ERROR] CHILLER_LINE_1: TCP Connection Timed Out
+[PLC ERROR] BPM_LINE_2: TCP Connection Timed Out
+[PLC ERROR] HEATING_LINE_2: TCP Connection Timed Out
+[PLC ERROR] CHILLER_LINE_2: TCP Connection Timed Out
+[DB] Pool MySQL dibuat (singleton).
+🚀 SERVER RUNNING → http://localhost:3001
+[PLC] Connecting...
+[PLC ERROR] BPM_LINE_1: TCP Connection Timed Out
+[PLC ERROR] HEATING_LINE_1: TCP Connection Timed Out
+[PLC ERROR] CHILLER_LINE_1: TCP Connection Timed Out
+[PLC ERROR] BPM_LINE_2: TCP Connection Timed Out
+[PLC ERROR] HEATING_LINE_2: TCP Connection Timed Out
+[PLC ERROR] CHILLER_LINE_2: TCP Connection Timed Out
+[DB] Pool MySQL dibuat (singleton).
+🚀 SERVER RUNNING → http://localhost:3001
+[PLC] Connecting...
+[DB] Pool MySQL dibuat (singleton).
+🚀 SERVER RUNNING → http://localhost:3001
+[PLC] Connecting...
+[PLC CONNECTED] BPM_LINE_1 (10.2.13.74)
+[PLC CONNECTED] HEATING_LINE_1 (10.2.13.75)
+[PLC CONNECTED] CHILLER_LINE_1 (10.2.13.76)
+[PLC ERROR] BPM_LINE_2: TCP Connection Timed Out
+[PLC CONNECTED] HEATING_LINE_2 (10.2.13.78)
+[PLC ERROR] CHILLER_LINE_2: TCP Connection Timed Out
+[DB] 104 baris disimpan ke plc_data.
+[DB] 104 baris disimpan ke plc_data.
+[DB] 104 baris disimpan ke plc_data.
+[DB] 78 baris disimpan ke plc_data.
+[DB] 26 baris disimpan ke plc_data.
+[DB] Pool MySQL dibuat (singleton).
+🚀 SERVER RUNNING → http://localhost:3001
+[PLC] Connecting...
+[PLC ERROR] BPM_LINE_1: TCP Connection Timed Out

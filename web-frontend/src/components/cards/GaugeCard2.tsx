@@ -46,7 +46,7 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
   const fetchData = async () => {
 
     try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/get_pressure_data`, {
+    const res = await fetch(`http://10.2.11.4:6060/api/get_pressure_data`, {
       cache: "no-store",
     });
 
@@ -54,8 +54,6 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
       const dataArray: DataPoint[] = Array.isArray(json)
         ? json
         : json.data || [];
-
-      console.log(dataArray)
 
       setDataPwi(dataArray);
       setIsLoading(false);

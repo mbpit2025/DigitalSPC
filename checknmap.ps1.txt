@@ -1,0 +1,72 @@
+<#
+.SYNOPSIS
+  Melakukan ping dan memeriksa beberapa port TCP spesifik untuk daftar alamat IP.
+.DESCRIPTION
+  Script ini menguji konektivitas dasar (ping) dan status beberapa port TCP
+  untuk setiap IP yang terdaftar. Hasil ditampilkan dalam format tabel yang rapi.
+.NOTES
+  Diperlukan PowerShell 3.0 atau yang lebih baru.
+#>
+
+# --- KONFIGURASI ---
+$IPList = @(
+    "10.2.13.74", "10.2.13.75", "10.2.13.76", "10.2.13.77", "10.2.13.78", "10.2.13.79", 
+    "8.8.8.8"   
+    # Tambahkan semua IP PLC yang ingin Anda uji di sini.
+)
+$TestPorts = 502, 5000 # Daftar port yang akan diuji (Modbus standar: 502)
+# --------------------
+
+$Results = @()
+
+Write-Host "--- Start Connection Checking ---"
+Write-Host "Target Ports: $($TestPorts -join ', ')"
+Write-Host "----------------------------------`n"
+
+
+foreach ($IP in $IPList) {
+    Write-Host "Checking IP: $IP ..." -NoNewline
+    
+    # 1. Uji Ping (ICMP) - Hanya perlu dilakukan sekali per IP
+    $PingResult = Test-Connection -ComputerName $IP -Count 1 -ErrorAction SilentlyContinue | Select-Object -First 1
+    
+    $StatusPing = if ($PingResult -ne $null) { "CONNECT" } else { "DOWN/BLOCKED" }
+    $Latency = if ($PingResult -ne $null) { "$($PingResult.ResponseTime) ms" } else { "-" }
+
+    # 2. Uji Port TCP (LOOP BERSARANG - Nested Loop)
+    foreach ($Port in $TestPorts) {
+        $PortStatus = "TUTUP/BLOKIR"
+        
+        # Hanya coba uji port jika ping berhasil (menghemat waktu pada IP yang mati)
+        if ($StatusPing -eq "CONNECT") {
+            try {
+                # Uji koneksi pada port spesifik
+                $TNCResult = Test-NetConnection -ComputerName $IP -Port $Port -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction Stop
+                
+                # Jika TNCResult berhasil (TcpTestSucceeded = True)
+                if ($TNCResult) {
+                    $PortStatus = "TERBUKA ($Port)"
+                }
+            }
+            catch {
+                # Test-NetConnection akan melempar error jika koneksi gagal atau timeout
+                $PortStatus = "TUTUP/BLOKIR" 
+            }
+        }
+        
+        # Membuat objek hasil untuk setiap kombinasi IP dan Port
+        $Results += [PSCustomObject]@{
+            "Alamat_IP"          = $IP
+            "Ping_Status"        = $StatusPing
+            "Latency_ms"         = $Latency
+            "Port_Uji"           = $Port
+            "Status_Port_TCP"    = $PortStatus
+        }
+    }
+    Write-Host " Done."
+}
+
+Write-Host "`n--- CONNECTION TEST RESULT ---`n"
+
+# Menampilkan hasil dalam format tabel yang rapi
+$Results | Format-Table -AutoSize
