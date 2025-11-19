@@ -10,5 +10,6 @@
   "BPM_LINE_1_data7": "data7 | Cold 4",
   "HEATING_LINE_1_data1": "data1 | Conveyor Speed",
   "HEATING_LINE_1_data10": "data10 | Shoe detection 1",
-  "HEATING_LINE_1_data11": "data11 | Shoe Detection 2"
+  "HEATING_LINE_1_data11": "data11 | Shoe Detection 2",
+  "HEATING_LINE_1_data2": "data2"
 }

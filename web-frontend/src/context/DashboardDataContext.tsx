@@ -30,9 +30,9 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
 
   const isDataValid = (latestdata: DataPoint[]) => {
     if (!Array.isArray(latestdata) || latestdata.length === 0) return false;
-    const allZero = latestdata.every((dp) => dp.value === 0);
-    return !allZero;
+    return latestdata.some((dp) => dp.value !== null && dp.value !== undefined);
   };
+
 
   const fetchData = useCallback(async () => {
     try {

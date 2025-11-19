@@ -27,39 +27,39 @@ const clients = PLCS.map((plc) => {
 });
 
 // ✅ Fungsi connect aman + timeout paksa
-// async function safeConnect(plc) {
-//   return new Promise((resolve, reject) => {
-//     let finished = false;
+async function safeConnect(plc) {
+  return new Promise((resolve, reject) => {
+    let finished = false;
 
-//     plc.client.connectTCP(plc.ip, { port: plc.port })
-//       .then(() => {
-//         if (!finished) {
-//           finished = true;
-//           resolve();
-//         }
-//       })
-//       .catch((err) => {
-//         if (!finished) {
-//           finished = true;
-//           reject(err);
-//         }
-//       });
+    plc.client.connectTCP(plc.ip, { port: plc.port })
+      .then(() => {
+        if (!finished) {
+          finished = true;
+          resolve();
+        }
+      })
+      .catch((err) => {
+        if (!finished) {
+          finished = true;
+          reject(err);
+        }
+      });
 
-//     // timeout manual 3 detik
-//     setTimeout(() => {
-//       if (!finished) {
-//         finished = true;
+    // timeout manual 3 detik
+    setTimeout(() => {
+      if (!finished) {
+        finished = true;
 
-//         // ✅ disconnect paksa agar socket tidak menggantung
-//         if (plc.client._client) {
-//           try { plc.client._client.destroy(); } catch (e) {}
-//         }
+        // ✅ disconnect paksa agar socket tidak menggantung
+        if (plc.client._client) {
+          try { plc.client._client.destroy(); } catch (e) {}
+        }
 
-//         reject(new Error("Timeout"));
-//       }
-//     }, 3000);
-//   });
-// }
+        reject(new Error("Timeout"));
+      }
+    }, 3000);
+  });
+}
 
 const net = require("net");
 
