@@ -1,28 +1,9 @@
-/**
- * connection-monitor-full.js
- *
- * Gabungan versi rapih dari monitor PLC + polling + API + fallback port (502 -> 5000).
- *
- * STRATEGI BARU: Verifikasi Port hanya 1x di awal (initialConnectionCheck).
- * Port yang ditemukan (502 atau 5000) akan digunakan sampai server di-restart.
- *
- * Fitur Utama:
- * 1. Initial Check (net.Socket) dengan Fallback Port (502 -> 5000) - HANYA 1X SAAT STARTUP.
- * 2. Modbus Polling (ModbusRTU) menggunakan port yang diverifikasi.
- * 3. HTTP API untuk Connection Status dan Data Terbaru.
- * 4. Graceful handling error dengan menutup koneksi Modbus client yang rusak saat read gagal.
- *
- * Usage:
- * - node connection-monitor-full.js
- * - Pastikan config.js export: { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL }
- * - Pastikan services/calibration.js dan database/db-client.js tersedia
- */
+
 
 const ModbusRTU = require("modbus-serial");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const net = require("net");
 const { DateTime } = require("luxon");
 
 // Asumsi: File config.js, services/calibration.js, dan database/db-client.js tersedia

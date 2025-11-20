@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PLC Modbus Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <style>
+        /* ---------- STYLES ---------- */
+        html, body {
+            height: 100%;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1, h2 {
+            color: #333;
+            margin: 0 0 8px 0;
+        }
+        #last-update {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #007bff;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        .status-CONNECTED {
+            background-color: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+        .status-DISCONNECTED,
+        .status-SKIPPED {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .data-cell {
+            font-family: "Consolas", monospace;
+        }
+        .totals {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .chart-container {
+            margin-top: 40px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        /* responsive minor */
+        @media (max-width: 720px) {
+            th, td { padding: 8px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Monitoring Status PLC Modbus</h1>
+    <div id="last-update">Memuat data...</div>
+
+    <h2>Ringkasan Status Koneksi</h2>
+    <div class="totals">
+        Total PLC: <span id="total-plcs">0</span> | Terhubung: <span id="plcs-connected">0</span>
+    </div>
+
+    <table id="status-table" aria-describedby="last-update">
+        <thead>
+            <tr>
+                <th>Nama PLC</th>
+                <th>IP:Port</th>
+                <th>Unit ID</th>
+                <th>Status</th>
+                <th>Disconnect Count</th>
+                <th>Waktu Check</th>
+                <th>Error Info</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <hr />
+
+    <h2>History Koneksi PLC (50 Polling Terakhir)</h2>
+    <div class="chart-container">
+        <canvas id="connectionHistoryChart"></canvas>
+    </div>
+
+    <hr />
+
+    <h2>Data Terbaru per-Tag</h2>
+    <table id="data-table">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+    
+
+    <script>
+        /* ================= CONFIG API ================= */
+        const API_STATUS_URL = '/api/connection-status';
+        const API_DATA_URL = '/api/latest-data';
+        const API_HISTORY_URL = '/api/connection-history';
+
+        let connectionChart = null;
+        let disconnectCounters = {}; // Counter DISCONNECT tiap PLC
+
+        const PLC_NAMES = [
+            { id: 1, name: 'PLC_A', color: 'rgba(255, 99, 132, 1)' },
+            { id: 2, name: 'PLC_B', color: 'rgba(54, 162, 235, 1)' },
+            { id: 3, name: 'PLC_C', color: 'rgba(255, 206, 86, 1)' }
+        ];
+
+        /* ================= CHART ================= */
+        function initChart(labels, datasets) {
+            const ctx = document.getElementById('connectionHistoryChart').getContext('2d');
+            connectionChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 1.1,
+                            ticks: {
+                                callback: v => v === 1 ? 'CONNECTED' : (v === 0 ? 'DISCONNECTED' : ''),
+                                stepSize: 1
+                            },
+                            title: { display: true, text: 'Status Koneksi' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Polling Time (WIB)' },
+                            ticks: { maxTicksLimit: 10, autoSkip: true }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: {
+                            callbacks: {
+                                label: c => `${c.dataset.label}: ${c.parsed.y === 1 ? 'CONNECTED' : 'DISCONNECTED'}`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function fetchConnectionHistory() {
+            try {
+                const response = await fetch(API_HISTORY_URL);
+                if (!response.ok) throw new Error("Fetch history failed");
+                const history = await response.json();
+                if (!history.length) return;
+
+                const labels = history.map(h =>
+                    new Date(h.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                );
+
+                const datasets = PLC_NAMES.map(plc => ({
+                    label: plc.name,
+                    data: history.map(h => {
+                        const s = Array.isArray(h.statuses) ? h.statuses.find(x => x.unitId === plc.id) : null;
+                        return s ? (s.isConnected ? 1 : 0) : null;
+                    }),
+                    borderColor: plc.color,
+                    backgroundColor: plc.color.replace(/, *1\)$/, ', 0.2)'),
+                    borderWidth: 2,
+                    tension: 0,
+                    stepped: true,
+                    pointRadius: 3
+                }));
+
+                if (connectionChart) {
+                    connectionChart.data.labels = labels;
+                    connectionChart.data.datasets = datasets;
+                    connectionChart.update();
+                } else {
+                    initChart(labels, datasets);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        /* ================= TABLE STATUS ================= */
+        function updateDisconnectCounter(statusData) {
+            (statusData.status_details || []).forEach(p => {
+                if (!disconnectCounters[p.name]) disconnectCounters[p.name] = 0;
+                if (p.status === "DISCONNECTED") disconnectCounters[p.name]++;
+            });
+        }
+
+        function updateStatusTable(statusData) {
+            const tbody = document.querySelector('#status-table tbody');
+            document.getElementById('total-plcs').textContent = statusData.total_plcs ?? '0';
+            document.getElementById('plcs-connected').textContent = statusData.plcs_connected ?? '0';
+            document.getElementById('last-update').textContent =
+                `Terakhir diperbarui: ${new Date().toLocaleTimeString('id-ID')}`;
+
+            tbody.innerHTML = '';
+
+            (statusData.status_details || []).forEach(p => {
+                const row = tbody.insertRow();
+                const statusKey = (p.status || 'UNKNOWN').split(' ')[0];
+
+                row.insertCell().textContent = p.name || '-';
+                row.insertCell().textContent = `${p.ip}:${p.port}`;
+                row.insertCell().textContent = p.unitId ?? '-';
+
+                const statusCell = row.insertCell();
+                statusCell.textContent = p.status;
+                statusCell.className = `status-${statusKey}`;
+
+                // Counter disconnect kolom baru
+                row.insertCell().textContent = disconnectCounters[p.name] ?? 0;
+
+                row.insertCell().textContent = p.timestamp ?
+                    new Date(p.timestamp).toLocaleTimeString('id-ID') : '-';
+                row.insertCell().textContent = p.error || '-';
+            });
+        }
+
+        /* ================= TABLE DATA TAG ================= */
+
+async function fetchLatestData() {
+    try {
+        const [dataRes, historyRes] = await Promise.all([
+            fetch(API_DATA_URL),
+            fetch(API_HISTORY_URL)
+        ]);
+
+        if (!dataRes.ok) throw new Error('Latest data fetch failed: ' + dataRes.status);
+        if (!historyRes.ok) throw new Error('History fetch failed: ' + historyRes.status);
+
+        const dataStore = await dataRes.json();
+        const history = await historyRes.json();
+        const historyCount = history.length; // 🔥 Ambil nomor history polling ke-berapa
+
+        const tableHead = document.getElementById('data-table').querySelector('thead');
+        const tableBody = document.getElementById('data-table').querySelector('tbody');
+
+        tableHead.innerHTML = "";
+        tableBody.innerHTML = "";
+
+        if (!Array.isArray(dataStore.data) || dataStore.data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="99">Tidak ada data tag yang terhubung/dibaca.</td></tr>`;
+            return;
+        }
+
+        // 🔥 Tambahkan kolom "History #"
+        const grouped = {};
+        const tagNamesSet = new Set();
+
+        dataStore.data.forEach(d => {
+            if (!grouped[d.plc_name]) grouped[d.plc_name] = {};
+            grouped[d.plc_name][d.tag_name] = d.value;
+            tagNamesSet.add(d.tag_name);
+        });
+
+        const tagNames = Array.from(tagNamesSet);
+        const headerRow = document.createElement("tr");
+
+        headerRow.innerHTML = `
+            <th>History #</th>
+            <th>PLC Name</th>
+            ${tagNames.map(tag => `<th>${tag}</th>`).join("")}
+        `;
+        tableHead.appendChild(headerRow);
+
+        Object.keys(grouped).forEach(plc => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td><strong>${historyCount}</strong></td>
+                <td><strong>${plc}</strong></td>
+                ${tagNames.map(tag => `<td>${grouped[plc][tag] ?? '-'}</td>`).join("")}
+            `;
+            tableBody.appendChild(row);
+        });
+
+    } catch (error) {
+        console.error("Gagal memuat data terbaru:", error);
+    }
+}
+
+        /* ================= FETCH GLOBAL ================= */
+        async function fetchStatusAndData() {
+            try {
+                const response = await fetch(API_STATUS_URL);
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                const statusData = await response.json();
+
+                updateDisconnectCounter(statusData);
+                updateStatusTable(statusData);
+                fetchLatestData(); // data tag tidak tunggu history
+
+            } catch (error) {
+                console.error("Gagal memuat status:", error);
+                document.getElementById('last-update').textContent =
+                    `Gagal memuat data (${new Date().toLocaleTimeString('id-ID')})`;
+            }
+        }
+
+        /* ================= INTERVAL ================= */
+        fetchStatusAndData();
+        setInterval(fetchStatusAndData, 2000);     // 10 detik
+
+        fetchConnectionHistory();
+        setInterval(fetchConnectionHistory, 30000); // 5 menit
+    </script>
+</body>
+</html>

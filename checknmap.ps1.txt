@@ -10,8 +10,7 @@
 
 # --- KONFIGURASI ---
 $IPList = @(
-    "10.2.13.74", "10.2.13.75", "10.2.13.76", "10.2.13.77", "10.2.13.78", "10.2.13.95", 
-    "8.8.8.8"   
+    "10.2.13.74", "10.2.13.75", "10.2.13.76", "10.2.13.77", "10.2.13.78", "10.2.13.95" 
     # Tambahkan semua IP PLC yang ingin Anda uji di sini.
 )
 $TestPorts = 502, 5000 # Daftar port yang akan diuji (Modbus standar: 502)
