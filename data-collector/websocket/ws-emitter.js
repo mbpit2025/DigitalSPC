@@ -9,9 +9,9 @@ async function pushLatestData(payload) {
     });
 
     const result = await res.json();
-    console.log("[DUMMY -> API] Response:", result);
+    console.log("[API POST] Response:", result);
   } catch (err) {
-    console.error("[DUMMY -> API] Error:", err.message);
+    console.error("[API POST] Error:", err.message);
   }
 }
 

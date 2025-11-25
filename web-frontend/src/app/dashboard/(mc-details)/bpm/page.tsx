@@ -4,6 +4,7 @@ import Button from '@/components/ui/button/Button';
 import { useState } from 'react';
 import Image from 'next/image';
 import BarChartOne from '@/components/charts/bar/BarChartOne';
+// import CustomGaugeChart from '@/components/charts/CustomGaugeChart';
 
 function BpmPage() {
 
@@ -89,6 +90,10 @@ function BpmPage() {
             BPM Back Part Molding - {selectedCell} Output Chart
           </h1>
           {/* Additional content can go here */}
+        </div>
+
+        <div className="bg-white p-6 shadow-lg rounded-lg">
+                  {/* <CustomGaugeChart min={50} max={150} value={130} title="Temperature (C)" /> */}
         </div>
       </div>
   )

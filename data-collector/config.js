@@ -4,7 +4,7 @@
 // Definisi 6 PLC (Minimalis)
 const PLCS = [
     { 
-      id: "1", name: 'BPM_LINE_1', ip: '10.2.13.74', port: 5000, unitId: 1, 
+      id: "1", name: 'BPM_LINE_1', ip: '10.2.13.74', port: 502, unitId: 1, 
       tagRanges: {
           // Range 1: Diterapkan ke data1, data2, data3
           'data2|data3|data8|data9': { min: 80, max: 90 }, 
@@ -58,6 +58,8 @@ const DATA_POINTS_MAP = [];
 const START_REGISTER = 5000;
 const TOTAL_POINTS = 26;
 const GLOBAL_DEFAULT_RANGE = { min: 50, max: 55 }; // Jika tidak ada konfigurasi spesifik
+const HISTORY_WINDOW_MINUTES = 30;
+
 
 for (let i = 0; i < TOTAL_POINTS; i++) {
     DATA_POINTS_MAP.push({

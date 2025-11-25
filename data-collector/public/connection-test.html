@@ -1,3 +1,4 @@
+<!-- connection-test.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -97,13 +98,13 @@
     if (latency === null || latency === undefined) {
       return { text: "Failed ❌", class: "bg-red-700 text-red-200 font-bold px-2 py-1 rounded" };
     }
-    if (latency <= 5) {
+    if (latency <= 10) {
       return { text: "Excellent ✅", class: "bg-green-700 text-green-200 font-bold px-2 py-1 rounded" };
     }
-    if (latency <= 10) {
+    if (latency <= 30) {
       return { text: "Good ✅", class: "bg-green-700 text-green-200 font-bold px-2 py-1 rounded" };
     }
-    if (latency <= 20) {
+    if (latency <= 50) {
       return { text: "Cukup ⚠", class: "bg-yellow-600 text-yellow-200 font-bold px-2 py-1 rounded" };
     }
     return { text: "Bad ❌", class: "bg-red-700 text-red-200 font-bold px-2 py-1 rounded" };

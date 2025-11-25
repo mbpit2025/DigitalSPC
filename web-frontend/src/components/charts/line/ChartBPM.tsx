@@ -14,6 +14,7 @@ import { getRealtimeChartOptions } from "@/config/chartOptions";
 import "@/config/chartSetup";
 import { LineAnnotation } from "@/types/chartjs";
 import { useDashboardData } from "@/context/DashboardDataContext";
+import { fetchChartData } from "@/utils/chartfunction";
 
 interface CellConfig {
     plcId: string;
@@ -58,16 +59,6 @@ const COLORS: { [key: string]: string } = {
 
 const POLLING_INTERVAL = 15000; 
 const HISTORY_LIMIT = 50; 
-
-const fetchData = async (plcId: string): Promise<ApiDataItem[]> => {
-    const apiUrl = `/api/log/${plcId}`; 
-    const response = await fetch(apiUrl);
-    if (!response.ok) {
-        throw new Error(`Gagal mengambil data API untuk PLC ${plcId}: ${response.statusText}`);
-    }
-    const data: ApiDataItem[] = await response.json();
-    return data;
-};
 
 const processData = (
   apiData: ApiDataItem[], 
@@ -188,7 +179,7 @@ export const ChartBPM = ({ selectedCell, selectedModel, title }: CardProps) => {
 
     const pollApi = async () => {
       try {
-        const apiResponse = await fetchData(config.plcId);
+        const apiResponse = await fetchChartData(config.plcId);
         setDataHistory(prev => processData(apiResponse, prev, tagsToDisplay, filterRange));
         setLoading(false);
       } catch (err: unknown) {

@@ -1,7 +1,6 @@
 
 require("dotenv").config();
 const { DateTime } = require("luxon");
-const cron = require("node-cron");
 const {
   PLCS,
   DATA_POINTS_MAP,
@@ -11,11 +10,10 @@ const {
 const { pushLatestData } = require("./websocket/ws-emitter");
 const {
   saveHistoricalData,
-  getLastDataTimestamp,
-  cleanDataOlderThanToday,
   processAndStoreHistory,
 } = require("./database/db-client");
 const {startAlarmChecker} = require("./alarm/alarm-checker")
+const { initTableForToday, startDailyCleaner, historyProcessorLoop } = require("./functions/databasefunction");
 
 // =====================================================
 // ⚙️ CONFIGURABLE SETTINGS via .env
@@ -29,7 +27,6 @@ const END_HOUR = parseInt(process.env.END_HOUR || "23", 10);
 const END_MINUTE = parseInt(process.env.END_MINUTE || "50", 10);
 
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
-const HISTORY_WINDOW_MINUTES = 30;
 
 // =====================================================
 // 🕒 Log Info Jadwal Aktif
@@ -50,89 +47,6 @@ console.log(
 );
 console.log("=========================================");
 
-// =====================================================
-// 🧹 #1 Inisialisasi & Pembersihan Harian
-// =====================================================
-async function initTableForToday() {
-  try {
-    const lastTimestamp = await getLastDataTimestamp();
-    const today = DateTime.now().setZone(JAKARTA_TIMEZONE);
-    if (!lastTimestamp) {
-      console.log("[INIT] Tabel kosong, siap menyimpan data baru.");
-      return;
-    }
-
-    const lastDate = DateTime.fromJSDate(lastTimestamp).setZone(JAKARTA_TIMEZONE);
-    console.log(
-      `[INIT INFO] Tanggal Terakhir: ${lastDate.toISODate()} | Hari Ini: ${today.toISODate()}`
-    );
-
-    if (!lastDate.hasSame(today, "day")) {
-      console.log(`[INIT] Data bukan hari ini — membersihkan tabel...`);
-      const deleted = await cleanDataOlderThanToday();
-      console.log(`[INIT CLEANUP] ${deleted} baris dihapus.`);
-    } else {
-      console.log("[INIT] Data masih hari ini — tidak ada penghapusan.");
-    }
-  } catch (err) {
-    console.error("[INIT ERROR] Gagal saat inisialisasi tabel:", err);
-  }
-}
-
-function startDailyCleaner() {
-  cron.schedule(
-    "1 0 * * *",
-    async () => {
-      console.log("\n[CRON] Menjalankan pembersihan harian...");
-      await initTableForToday();
-      console.log("[CRON] Pembersihan selesai.\n");
-    },
-    { timezone: JAKARTA_TIMEZONE }
-  );
-  console.log("✅ CRON Pembersihan harian dijadwalkan pukul 00:01 WIB.");
-}
-
-// =====================================================
-// ⏳ #2 Pemrosesan History Tiap 10 Menit
-// =====================================================
-let lastProcessedTime = DateTime.now()
-  .setZone(JAKARTA_TIMEZONE)
-  .startOf("minute")
-  .minus({ minutes: DateTime.now().minute % HISTORY_WINDOW_MINUTES });
-
-async function historyProcessorLoop() {
-  const currentTime = DateTime.now().setZone(JAKARTA_TIMEZONE);
-  const nextTime = lastProcessedTime.plus({ minutes: HISTORY_WINDOW_MINUTES });
-
-  if (currentTime >= nextTime) {
-    console.log(
-      `\n--- [HISTORY PROCESS] Periode: ${lastProcessedTime.toFormat(
-        "HH:mm"
-      )} - ${nextTime.toFormat("HH:mm")} ---`
-    );
-
-    try {
-      const results = await processAndStoreHistory(
-        lastProcessedTime.toJSDate(),
-        nextTime.toJSDate()
-      );
-
-      if (results.processed > 0) {
-        console.log(
-          `[HISTORY] ${results.processed} grup data dipindahkan (${HISTORY_WINDOW_MINUTES} menit)`
-        );
-      } else {
-        console.log("[HISTORY] Tidak ada data baru untuk diproses.");
-      }
-
-      lastProcessedTime = nextTime;
-    } catch (err) {
-      console.error("[HISTORY ERROR]", err);
-    }
-  }
-
-  setTimeout(historyProcessorLoop, POLLING_INTERVAL);
-}
 
 // =====================================================
 // 🔄 #3 Dummy Data Generator

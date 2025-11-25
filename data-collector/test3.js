@@ -39,6 +39,9 @@ const PLCS_CONFIG = [
   { name: "PLC_A", ip: "10.2.13.74", port: 5000, unitId: 1, startRegister: START_REGISTER, count: REGISTER_COUNT },
   { name: "PLC_B", ip: "10.2.13.75", port: 5000, unitId: 2, startRegister: START_REGISTER, count: REGISTER_COUNT },
   { name: "PLC_C", ip: "10.2.13.76", port: 5000, unitId: 3, startRegister: START_REGISTER, count: REGISTER_COUNT },
+  { name: "PLC_D", ip: "10.2.13.77", port: 5000, unitId: 4, startRegister: START_REGISTER, count: REGISTER_COUNT },
+  { name: "PLC_E", ip: "10.2.13.78", port: 5000, unitId: 5, startRegister: START_REGISTER, count: REGISTER_COUNT },
+  { name: "PLC_F", ip: "10.2.13.95", port: 5000, unitId: 6, startRegister: START_REGISTER, count: REGISTER_COUNT },
 ];
 
 const POLLING_INTERVAL_MS = 1000;
@@ -177,12 +180,18 @@ async function pollingLoop() {
     await delay(DELAY_BETWEEN_PLCS_MS);
   }
 
-  latestDataStore = { status: "success", timestamp: pollTimestamp, data: allTags };
+  latestDataStore = { status: "success", timestamp: pollTimestamp, length: allTags.length, data: allTags };
   connectionSummary = { total_plcs: PLCS_CONFIG.length, plcs_connected: connectedCount, status_details: statusDetails };
 
   // 🔥 RIWAYAT
-  connectionHistory.push({ timestamp: pollTimestamp, connected: connectedCount });
-  if (connectionHistory.length > CONNECTION_HISTORY_LIMIT) connectionHistory.shift();
+    connectionHistory.push({
+    timestamp: pollTimestamp,
+    statuses: statusDetails.map(s => ({
+        unitId: s.unitId,
+        isConnected: s.status === "CONNECTED"
+    }))
+    });
+    if (connectionHistory.length > CONNECTION_HISTORY_LIMIT) connectionHistory.shift();
 
   setTimeout(pollingLoop, POLLING_INTERVAL_MS);
 }

@@ -111,7 +111,6 @@
         <thead></thead>
         <tbody></tbody>
     </table>
-    
 
     <script>
         /* ================= CONFIG API ================= */
@@ -319,10 +318,10 @@ async function fetchLatestData() {
 
         /* ================= INTERVAL ================= */
         fetchStatusAndData();
-        setInterval(fetchStatusAndData, 2000);     // 10 detik
+        setInterval(fetchStatusAndData, 2000);     // 2 detik
 
         fetchConnectionHistory();
-        setInterval(fetchConnectionHistory, 30000); // 5 menit
+        setInterval(fetchConnectionHistory, 30000); // 30 detik
     </script>
 </body>
 </html>

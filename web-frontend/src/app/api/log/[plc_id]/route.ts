@@ -29,7 +29,7 @@ export async function GET(request: Request, {params} : {params : Promise<{ plc_i
     const results = await dbQuery<PlcData>(query, values);
 
     // Mengembalikan data sebagai JSON response
-    return NextResponse.json(results, { status: 200 });
+    return NextResponse.json({status: 200, total_data: results.length, plc_id: plc_id, data: results});
 
   } catch (error) {
     console.error(`API Error for PLC ID:`, error);

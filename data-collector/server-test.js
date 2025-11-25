@@ -5,12 +5,13 @@ const ModbusRTU = require("modbus-serial");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const net = require("net");
 const { DateTime } = require("luxon");
+const { exec } = require('child_process');
 
 const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("./config");
 const { calibrate } = require("./services/calibration");
 const { saveHistoricalData } = require("./database/db-client");
+const { pushLatestData } = require("./websocket/ws-emitter");
 
 // ============================================================
 const API_PORT = 3001;
@@ -74,52 +75,47 @@ try {
 // ============================================================
 // TEST KONEKSI (FAST SOCKET CHECK)
 // ============================================================
-async function testConnection(plc) {
+
+function pingHost(ip) {
+  // Gunakan perintah ping yang sesuai untuk OS Anda (cth. -c 1 untuk Linux/macOS, -n 1 untuk Windows)
+  const pingCommand = process.platform === 'win32'
+    ? `ping -n 1 -w 2500 ${ip}` // -n 1: kirim 1 paket, -w 2500: timeout 2500ms
+    : `ping -c 1 -W 2.5 ${ip}`; // -c 1: kirim 1 paket, -W 2.5: timeout 2.5 detik
+
   return new Promise(resolve => {
     const start = Date.now();
-    const socket = new net.Socket();
-    let done = false;
+    
+    exec(pingCommand, (error, stdout, stderr) => {
+      const latency = Date.now() - start;
+      const checkTime = new Date().toISOString();
 
-    socket.setTimeout(2500);
-
-    socket.connect(plc.port, plc.ip, () => {
-      if (done) return;
-      done = true;
-
-      socket.destroy();
-      plc.isConnected = true;
-      plc.lastLatency = Date.now() - start;
-      plc.lastCheckTime = new Date().toISOString();
-      resolve();
-    });
-
-    socket.on("timeout", () => {
-      if (done) return;
-      done = true;
-
-      plc.isConnected = false;
-      plc.lastLatency = null;
-      plc.lastCheckTime = new Date().toISOString();
-      socket.destroy();
-      resolve();
-    });
-
-    socket.on("error", () => {
-      if (done) return;
-      done = true;
-
-      plc.isConnected = false;
-      plc.lastLatency = null;
-      plc.lastCheckTime = new Date().toISOString();
-      socket.destroy();
-      resolve();
+      if (error) {
+        // Ping gagal (host tidak merespons, timeout, atau masalah DNS)
+        resolve({ isConnected: false, lastLatency: null, lastCheckTime: checkTime });
+      } else if (stdout.includes('Request timed out') || stdout.includes('100% loss')) {
+        // Ping berhasil mencapai OS tetapi gagal mencapai host (Windows timeout / 100% loss)
+        resolve({ isConnected: false, lastLatency: null, lastCheckTime: checkTime });
+      } else {
+        // Ping berhasil, cari latency yang sebenarnya dari output jika diperlukan
+        // Untuk kesederhanaan, kita gunakan waktu eksekusi perintah total.
+        resolve({ isConnected: true, lastLatency: latency, lastCheckTime: checkTime });
+      }
     });
   });
 }
 
+async function testConnectionPing(plc) {
+  const result = await pingHost(plc.ip);
+  
+  plc.isConnected = result.isConnected;
+  plc.lastLatency = result.lastLatency;
+  plc.lastCheckTime = result.lastCheckTime;
+}
+
+// Fungsi periodicCheck tetap sama, hanya memanggil testConnectionPing
 async function periodicCheck() {
   for (const plc of plcList) {
-    await testConnection(plc);
+    await testConnectionPing(plc);
   }
   setTimeout(periodicCheck, 10000);
 }
@@ -231,6 +227,7 @@ const server = http.createServer((req, res) => {
     }));
 
     res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+    pushLatestData(merged);
     return res.end(JSON.stringify({ status: "success", timestamp: lastUpdateTimestamp, data: merged }));
   }
 
