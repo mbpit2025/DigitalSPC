@@ -32,19 +32,9 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
   const [dataPwi, setDataPwi] = useState<DataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { standardData } = useDashboardData();
-
   const config = DATA_MAP[selectedCell];
 
-  const standards: MachineStandardLimits =
-    (selectedModel && standardData[selectedModel]) ||
-    standardData["DEFAULT"];
-
-  const { GM_PRESS_MAX, GM_PRESS_MIN } = standards;
-
-  const selectedPlcIds = config ? [config.plc_name] : [];
-
-  const fetchData = async () => {
-
+const fetchData = async () => {
     try {
     const res = await fetch(`http://10.2.11.4:6060/api/get_pressure_data`, {
       cache: "no-store",
@@ -69,6 +59,27 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, []);
+
+
+
+
+  const standards: MachineStandardLimits =
+    (selectedModel && standardData[selectedModel]) ||
+    standardData["DEFAULT"];
+  
+  if (!standards) {
+    return (
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <p className="text-gray-600 dark:text-gray-400">
+          Loading standards or standards not found for model: {selectedModel || "DEFAULT"}
+        </p>
+      </div>
+    );
+    }
+
+  const { GM_PRESS_MAX, GM_PRESS_MIN } = standards;
+
+  const selectedPlcIds = config ? [config.plc_name] : [];
 
   const filteredData = dataPwi.filter((item) =>
     selectedPlcIds.includes(item.plc_name)

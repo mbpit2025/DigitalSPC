@@ -41,6 +41,16 @@ export const ChillerCard = ({selectedCell, selectedModel}: CardProps) => {
     (selectedModel && standardData[selectedModel]) ||
     standardData["DEFAULT"];
   
+  if (!standards) {
+    return (
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <p className="text-gray-600 dark:text-gray-400">
+          Loading standards or standards not found for model: {selectedModel || "DEFAULT"}
+        </p>
+      </div>
+    );
+    }
+  
   const { CH_OT_TEMP_MIN, CH_OT_TEMP_MAX, CH_UP_TEMP_MIN, CH_UP_TEMP_MAX } = standards;
   
   // PLC yang dipilih (string)

@@ -62,6 +62,15 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
   const standards: MachineStandardLimits =
     (selectedModel && standardData[selectedModel]) || standardData["DEFAULT"];
 
+  if (!standards) {
+    return (
+      <div className="p-5 rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <p className="text-gray-600 dark:text-gray-400">
+          Loading standards or standards not found for model: {selectedModel || "DEFAULT"}
+        </p>
+      </div>
+    );
+    }    
   const { UP_PRESSURE_MIN = 0, UP_PRESSURE_MAX = 100 } = standards;
 
   const filteredData = dataPwi.filter((item) =>
