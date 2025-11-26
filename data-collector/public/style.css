@@ -1,26 +1,117 @@
-/* ====== Skeleton Shimmer ====== */
+  /* ====================== BASE STYLE ======================= */
+  body {
+    background: #0f172a;
+    color: #e5e7eb;
+    font-family: "Segoe UI", sans-serif;
+    padding: 1rem;
+  }
 
-.skeleton {
-  background: #3b3f4a;
-  border-radius: 6px;
-  position: relative;
-  overflow: hidden;
-}
+  .card {
+    background: #1e293b;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    width: 100%;
+    max-width: 900px;
+  }
 
-.skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255,255,255,0.12) 50%,
-    transparent 100%
-  );
-  animation: shimmer 1.6s infinite;
-}
+  h2 {
+    margin-bottom: .5rem;
+    font-size: 18px;
+    font-weight: 600;
+  }
 
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
+  /* ====================== SKELETON ======================= */
+  .skeleton {
+    background: #3f4755;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.15) 50%,
+      transparent 100%
+    );
+    animation: skeleton-shimmer 1.5s infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* ====================== TABLE ======================= */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+  }
+
+  th, td {
+    padding: 8px 12px;
+    white-space: nowrap;
+  }
+
+  thead tr {
+    background: #1d4ed8 !important;
+  }
+
+  th {
+    font-weight: 600;
+  }
+
+  tbody tr td {
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  tbody tr:hover td {
+    background-color: #4b5563 !important;
+  }
+
+  /* ====================== EDIT MODE ======================= */
+  td.editing {
+    background: #111827 !important;
+    border: 1px solid #4b5563 !important;
+  }
+
+  input.alias-input {
+    outline: none;
+    font-size: 13px;
+    padding: 2px 4px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #f8fafc;
+  }
+
+  /* ====================== RESPONSIVE ======================= */
+  @media (max-width: 640px) {
+    th, td {
+      font-size: 12px;
+      padding: 6px 8px;
+    }
+
+    .card {
+      padding: .7rem;
+    }
+
+    h2 {
+      font-size: 16px;
+    }
+
+    table {
+      min-width: 450px;
+    }
+  }

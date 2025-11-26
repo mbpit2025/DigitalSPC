@@ -11,5 +11,9 @@
   "HEATING_LINE_1_data1": "data1 | Conveyor Speed",
   "HEATING_LINE_1_data10": "data10 | Shoe detection 1",
   "HEATING_LINE_1_data11": "data11 | Shoe Detection 2",
-  "HEATING_LINE_1_data2": "data2"
+  "HEATING_LINE_1_data2": "data2",
+  "BPM_LINE_1_data10": "data10 | Hot 1 Qty",
+  "BPM_LINE_1_data11": "data11 | Hot 2 Qty",
+  "BPM_LINE_1_data12": "data12 | Cold",
+  "BPM_LINE_2_data1": "data1"
 }

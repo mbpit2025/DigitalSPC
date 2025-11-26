@@ -99,7 +99,6 @@ function pingHost(ip) {
 async function testConnectionPing(plc) {
   try {
     const result = await pingHost(plc.ip);
-    // Hanya simpan latency / checkTime sebagai info, jangan set plc.isConnected berdasarkan ping
     plc.lastLatency = result.lastLatency;
     plc.lastCheckTime = result.lastCheckTime;
   } catch {
@@ -120,7 +119,7 @@ async function periodicCheck() {
 // ============================================================
 const plcList = PLCS.map((plc) => {
   const client = new ModbusRTU();
-  client.setTimeout(2000);
+  client.setTimeout(5000);
 
   return {
     ...plc,
@@ -189,7 +188,7 @@ async function safeReconnect(plc) {
 
     // create new client instance to avoid zombie sockets piling up
     plc.client = new ModbusRTU();
-    plc.client.setTimeout(2000);
+    plc.client.setTimeout(5000);
 
     // connect
     await plc.client.connectTCP(plc.ip, { port: Number(plc.port) });
