@@ -10,7 +10,7 @@ const path = require("path");
 const { DateTime } = require("luxon");
 
 // 🔥 IMPORT KALIBRASI
-const { calibrate } = require("./services/calibration");
+const { calibrate } = require("../services/calibration");
 
 // ============================================================
 // KONFIGURASI DATA POINTS (TANPA FUNGSI KALIBRASI ‼)

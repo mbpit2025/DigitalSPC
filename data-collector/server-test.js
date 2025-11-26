@@ -1,4 +1,5 @@
-//============================================================
+// server.js
+// ============================================================
 // DEPENDENCIES
 // ============================================================
 const ModbusRTU = require("modbus-serial");
@@ -6,7 +7,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { DateTime } = require("luxon");
-const { exec } = require('child_process');
+const { exec } = require("child_process");
 
 const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("./config");
 const { calibrate } = require("./services/calibration");
@@ -14,35 +15,27 @@ const { saveHistoricalData } = require("./database/db-client");
 const { pushLatestData } = require("./websocket/ws-emitter");
 
 // ============================================================
+// CONFIG / CONST
+// ============================================================
 const API_PORT = 3001;
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
-const DELAY_BETWEEN_PLCS_MS = 200;
+const DELAY_BETWEEN_PLCS_MS = 200; // jeda antar PLC saat polling
+
+// Reconnect/backoff
+const RECONNECT_DELAY = 3000; // ms initial
+const RETRY_BACKOFF_STEP = 2000;
+const MAX_RETRY_INTERVAL = 15000;
 
 // ============================================================
 // UTILS
 // ============================================================
 function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ============================================================
-// SINGLE PLC LIST (FIXED VERSION)
-// ============================================================
-const plcList = PLCS.map(plc => {
-  const client = new ModbusRTU();
-  client.setTimeout(2000);
-
-  client.on("error", () => {});
-  if (client._client) client._client.on("error", () => {});
-
-  return {
-    ...plc,
-    client,
-    isConnected: false,
-    lastLatency: null,
-    lastCheckTime: null
-  };
-});
+function nowIso() {
+  return DateTime.now().setZone(JAKARTA_TIMEZONE).toISO();
+}
 
 // ============================================================
 // FRONTEND FILES
@@ -51,8 +44,7 @@ const DASHBOARD_FILE = path.join(__dirname, "public", "data.html");
 const ALIAS_FILE = path.join(__dirname, "alias.json");
 const CONNECTION_PAGE = path.join(__dirname, "public", "connection-test.html");
 
-if (!fs.existsSync(ALIAS_FILE))
-  fs.writeFileSync(ALIAS_FILE, JSON.stringify({}, null, 2), "utf8");
+if (!fs.existsSync(ALIAS_FILE)) fs.writeFileSync(ALIAS_FILE, JSON.stringify({}, null, 2), "utf8");
 
 function loadAliases() {
   try {
@@ -69,79 +61,196 @@ function saveAliases(data) {
 let HTML_TEMPLATE = "<h1>Dashboard Missing</h1>";
 try {
   HTML_TEMPLATE = fs.readFileSync(DASHBOARD_FILE, "utf8");
-} catch {}
-
+} catch (e) {
+  // tetap gunakan default template
+}
 
 // ============================================================
-// TEST KONEKSI (FAST SOCKET CHECK)
+// PING / CONNECTION TEST (informational only)
 // ============================================================
-
 function pingHost(ip) {
-  // Gunakan perintah ping yang sesuai untuk OS Anda (cth. -c 1 untuk Linux/macOS, -n 1 untuk Windows)
-  const pingCommand = process.platform === 'win32'
-    ? `ping -n 1 -w 2500 ${ip}` // -n 1: kirim 1 paket, -w 2500: timeout 2500ms
-    : `ping -c 1 -W 2.5 ${ip}`; // -c 1: kirim 1 paket, -W 2.5: timeout 2.5 detik
+  // Platform-specific ping command - timeout units differ between OS
+  const pingCommand =
+    process.platform === "win32"
+      ? `ping -n 1 -w 2500 ${ip}` // -n 1: one echo, -w 2500ms timeout
+      : `ping -c 1 -W 2 ${ip}`; // -c 1: one echo, -W 2 seconds timeout (Linux/macOS)
 
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const start = Date.now();
-    
     exec(pingCommand, (error, stdout, stderr) => {
       const latency = Date.now() - start;
       const checkTime = new Date().toISOString();
 
       if (error) {
-        // Ping gagal (host tidak merespons, timeout, atau masalah DNS)
-        resolve({ isConnected: false, lastLatency: null, lastCheckTime: checkTime });
-      } else if (stdout.includes('Request timed out') || stdout.includes('100% loss')) {
-        // Ping berhasil mencapai OS tetapi gagal mencapai host (Windows timeout / 100% loss)
-        resolve({ isConnected: false, lastLatency: null, lastCheckTime: checkTime });
-      } else {
-        // Ping berhasil, cari latency yang sebenarnya dari output jika diperlukan
-        // Untuk kesederhanaan, kita gunakan waktu eksekusi perintah total.
-        resolve({ isConnected: true, lastLatency: latency, lastCheckTime: checkTime });
+        return resolve({ isConnected: false, lastLatency: null, lastCheckTime: checkTime });
       }
+
+      const out = String(stdout || "");
+      // Basic negative detection for Windows and general output
+      if (out.includes("100% loss") || out.includes("Request timed out")) {
+        return resolve({ isConnected: false, lastLatency: null, lastCheckTime: checkTime });
+      }
+
+      return resolve({ isConnected: true, lastLatency: latency, lastCheckTime: checkTime });
     });
   });
 }
 
 async function testConnectionPing(plc) {
-  const result = await pingHost(plc.ip);
-  
-  plc.isConnected = result.isConnected;
-  plc.lastLatency = result.lastLatency;
-  plc.lastCheckTime = result.lastCheckTime;
+  try {
+    const result = await pingHost(plc.ip);
+    // Hanya simpan latency / checkTime sebagai info, jangan set plc.isConnected berdasarkan ping
+    plc.lastLatency = result.lastLatency;
+    plc.lastCheckTime = result.lastCheckTime;
+  } catch {
+    plc.lastLatency = null;
+    plc.lastCheckTime = new Date().toISOString();
+  }
 }
 
-// Fungsi periodicCheck tetap sama, hanya memanggil testConnectionPing
 async function periodicCheck() {
   for (const plc of plcList) {
-    await testConnectionPing(plc);
+    testConnectionPing(plc).catch(() => {});
   }
   setTimeout(periodicCheck, 10000);
 }
 
+// ============================================================
+// PLC LIST: create client per PLC
+// ============================================================
+const plcList = PLCS.map((plc) => {
+  const client = new ModbusRTU();
+  client.setTimeout(2000);
+
+  return {
+    ...plc,
+    client,
+    isConnected: false,
+    lastLatency: null,
+    lastCheckTime: null,
+    _reconnecting: false,
+    _backoff: RECONNECT_DELAY,
+  };
+});
+
+// Helper kecil untuk attach event ke underlying socket (jika ada)
+function attachSocketHandlers(plc) {
+  // Attach high-level client error event
+  try {
+    plc.client.on("error", (err) => {
+      plc.isConnected = false;
+      console.warn(`[${plc.name}] client error: ${err && err.message ? err.message : err}`);
+      safeReconnect(plc).catch(() => {});
+    });
+  } catch {}
+
+  // If underlying socket exists, attach close/error to it
+  try {
+    if (plc.client._client && plc.client._client.on) {
+      plc.client._client.on("close", () => {
+        plc.isConnected = false;
+        console.warn(`[${plc.name}] underlying socket closed`);
+        safeReconnect(plc).catch(() => {});
+      });
+
+      plc.client._client.on("error", (err) => {
+        plc.isConnected = false;
+        console.warn(`[${plc.name}] underlying socket error: ${err && err.message ? err.message : err}`);
+        safeReconnect(plc).catch(() => {});
+      });
+    }
+  } catch {}
+}
+
+// initially attach what we can
+for (const plc of plcList) {
+  attachSocketHandlers(plc);
+}
 
 // ============================================================
-// CONNECT ALL MODBUS CLIENTS
+// SAFE RECONNECT MECHANISM
+// ============================================================
+async function safeReconnect(plc) {
+  // prevent concurrent reconnect attempts
+  if (plc._reconnecting) return;
+  plc._reconnecting = true;
+
+  const delayTime = plc._backoff || RECONNECT_DELAY;
+  console.log(`⚠️  [${plc.name}] attempting reconnect in ${delayTime}ms...`);
+  await delay(delayTime);
+
+  try {
+    // try to close old client socket gracefully
+    try {
+      // close the modbus client if possible
+      // client.close supports callback or returns undefined; wrap in try/catch
+      plc.client.close(() => {});
+    } catch (e) {}
+
+    // create new client instance to avoid zombie sockets piling up
+    plc.client = new ModbusRTU();
+    plc.client.setTimeout(2000);
+
+    // connect
+    await plc.client.connectTCP(plc.ip, { port: Number(plc.port) });
+    plc.client.setID(Number(plc.unitId));
+
+    // reset states
+    plc.isConnected = true;
+    plc._backoff = RECONNECT_DELAY;
+    plc._reconnecting = false;
+
+    // attach socket handlers for this new client
+    attachSocketHandlers(plc);
+
+    console.log(`🔌 [${plc.name}] reconnected`);
+  } catch (err) {
+    plc.isConnected = false;
+    plc._reconnecting = false;
+    // increase backoff with cap
+    plc._backoff = Math.min((plc._backoff || RECONNECT_DELAY) + RETRY_BACKOFF_STEP, MAX_RETRY_INTERVAL);
+    console.warn(`[${plc.name}] reconnect failed: ${err && err.message ? err.message : err}. next try in ${plc._backoff}ms`);
+    // schedule next reconnect attempt
+    setTimeout(() => safeReconnect(plc).catch(() => {}), plc._backoff);
+  }
+}
+
+// ============================================================
+// CONNECT ALL PLCs (initial)
 // ============================================================
 async function connectModbus(plc) {
   try {
+    // create a fresh client for initial connect (in case)
+    try {
+      plc.client.close(() => {});
+    } catch {}
+
+    plc.client = plc.client || new ModbusRTU();
+    plc.client.setTimeout(2000);
+    await plc.client.connectTCP(plc.ip, { port: Number(plc.port) });
     plc.client.setID(Number(plc.unitId));
-    await plc.client.connectTCP(plc.ip, { port: plc.port });
 
     plc.isConnected = true;
-    console.log(`[PLC CONNECTED] ${plc.name} (${plc.ip})`);
+    plc._backoff = RECONNECT_DELAY;
+    attachSocketHandlers(plc);
+
+    console.log(`[PLC CONNECTED] ${plc.name} (${plc.ip}:${plc.port})`);
   } catch (err) {
     plc.isConnected = false;
-    console.log(`[PLC ERROR] ${plc.name}: ${err.message}`);
+    console.warn(`[PLC ERROR] ${plc.name}: ${err && err.message ? err.message : err}`);
+    // schedule reconnect but don't block
+    setTimeout(() => safeReconnect(plc).catch(() => {}), plc._backoff || RECONNECT_DELAY);
   }
 }
 
 async function connectAllPlcs() {
-  console.log("[PLC] Connecting...");
-  for (const plc of plcList) await connectModbus(plc);
+  console.log("[PLC] Connecting all configured PLCs...");
+  for (const plc of plcList) {
+    // small delay to avoid simultaneously spamming network
+    await connectModbus(plc);
+    await delay(100);
+  }
 }
-
 
 // ============================================================
 // MODBUS POLLING
@@ -154,9 +263,9 @@ async function readAndProcess(plc) {
     const COUNT = DATA_POINTS_MAP.length;
 
     const res = await plc.client.readHoldingRegisters(START, COUNT);
-    const values = res.data || [];
+    const values = res && res.data ? res.data : [];
 
-    plc.isConnected = true; // Update status (FIX)
+    plc.isConnected = true; // still alive
     const timestamp = DateTime.now().setZone(JAKARTA_TIMEZONE).toISO();
     const result = [];
 
@@ -165,6 +274,7 @@ async function readAndProcess(plc) {
       if (raw == null) return;
 
       let calibrated = calibrate(String(plc.id), p.tag_name, raw);
+      // contoh rule scaling yang ada di kode lama
       if (idx >= 1 && idx <= 8) calibrated = Number((calibrated / 10).toFixed(1));
 
       result.push({
@@ -173,14 +283,17 @@ async function readAndProcess(plc) {
         tag_name: p.tag_name,
         raw_value: raw,
         value: calibrated,
-        timestamp
+        timestamp,
       });
     });
 
     return result;
-
   } catch (e) {
+    // baca error -> tandai disconnect & trigger reconnect
     plc.isConnected = false;
+    console.warn(`[${plc.name}] read error: ${e && e.message ? e.message : e}`);
+    // Fire-and-forget reconnect path
+    safeReconnect(plc).catch(() => {});
     return [];
   }
 }
@@ -194,23 +307,38 @@ function storeLatestData(data) {
 }
 
 async function pollingLoop() {
-  const all = [];
+  try {
+    const all = [];
 
-  for (const plc of plcList) {
-    const result = await readAndProcess(plc);
-    if (result.length > 0) all.push(...result);
+    for (const plc of plcList) {
+      // Skip quickly if known disconnected, but still occasionally try to reconnect via safeReconnect scheduled earlier
+      if (plc.isConnected) {
+        const result = await readAndProcess(plc);
+        if (result.length > 0) all.push(...result);
+      } else {
+        // optional: attempt very cheap check like readCoils? but avoid heavy ops here
+        // We'll rely on safeReconnect scheduling separately.
+      }
 
-    await delay(DELAY_BETWEEN_PLCS_MS);
+      // small delay between PLC reads to avoid burst
+      await delay(DELAY_BETWEEN_PLCS_MS);
+    }
+
+    if (all.length > 0) {
+      try {
+        await saveHistoricalData(all);
+      } catch (dbErr) {
+        console.warn("Failed to save historical data:", dbErr && dbErr.message ? dbErr.message : dbErr);
+      }
+      storeLatestData(all);
+    }
+  } catch (loopErr) {
+    console.error("Polling loop error:", loopErr && loopErr.message ? loopErr.message : loopErr);
+  } finally {
+    // schedule next polling
+    setTimeout(pollingLoop, POLLING_INTERVAL);
   }
-
-  if (all.length > 0) {
-    await saveHistoricalData(all);
-    storeLatestData(all);
-  }
-
-  setTimeout(pollingLoop, POLLING_INTERVAL);
 }
-
 
 // ============================================================
 // HTTP SERVER (API)
@@ -221,20 +349,24 @@ const server = http.createServer((req, res) => {
   // API: latest-data
   if (parsed.pathname === "/api/latest-data") {
     const aliases = loadAliases();
-    const merged = latestDataStore.map(d => ({
+    const merged = latestDataStore.map((d) => ({
       ...d,
-      alias: aliases[`${d.plc_name}_${d.tag_name}`] || ""
+      alias: aliases[`${d.plc_name}_${d.tag_name}`] || "",
     }));
 
     res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-    pushLatestData(merged);
+    try {
+      pushLatestData(merged);
+    } catch (e) {
+      // ignore websocket push errors
+    }
     return res.end(JSON.stringify({ status: "success", timestamp: lastUpdateTimestamp, data: merged }));
   }
 
-  // API Update Alias
+  // API: update-alias
   if (parsed.pathname === "/api/update-alias" && req.method === "POST") {
     let body = "";
-    req.on("data", chunk => (body += chunk));
+    req.on("data", (chunk) => (body += chunk));
     req.on("end", () => {
       try {
         const { plc_name, tag_name, alias } = JSON.parse(body);
@@ -249,7 +381,7 @@ const server = http.createServer((req, res) => {
 
         res.writeHead(200);
         return res.end("ok");
-      } catch {
+      } catch (err) {
         res.writeHead(500);
         return res.end("Invalid JSON");
       }
@@ -260,19 +392,22 @@ const server = http.createServer((req, res) => {
   // API: connection-status
   if (parsed.pathname === "/api/connection-status") {
     res.writeHead(200, { "Content-Type": "application/json" });
-    return res.end(JSON.stringify({
-      status: "success",
-      timestamp: new Date().toISOString(),
-      data: plcList.map(p => ({
-        plc_id: p.id,
-        plc_name: p.name,
-        ip: p.ip,
-        port: p.port,
-        isConnected: p.isConnected,
-        latency: p.lastLatency,
-        lastCheckTime: p.lastCheckTime
-      }))
-    }));
+    return res.end(
+      JSON.stringify({
+        status: "success",
+        timestamp: new Date().toISOString(),
+        data: plcList.map((p) => ({
+          plc_id: p.id,
+          plc_name: p.name,
+          ip: p.ip,
+          port: p.port,
+          isConnected: p.isConnected, // actual modbus connection
+          isReachable: !!p.lastLatency, // ping info
+          latency: p.lastLatency,
+          lastCheckTime: p.lastCheckTime,
+        })),
+      })
+    );
   }
 
   // Dashboard
@@ -297,13 +432,13 @@ const server = http.createServer((req, res) => {
   res.end("Not Found");
 });
 
-
 // ============================================================
 // START SERVER
 // ============================================================
 server.listen(API_PORT, () => {
   console.log(`🚀 SERVER RUNNING → http://localhost:${API_PORT}`);
-  periodicCheck();
-  connectAllPlcs();
-  pollingLoop();
+  // Start background tasks
+  periodicCheck(); // ping info
+  connectAllPlcs(); // initial connect + schedules for reconnect
+  pollingLoop(); // main polling loop
 });

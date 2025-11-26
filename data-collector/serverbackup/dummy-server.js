@@ -6,14 +6,14 @@ const {
   DATA_POINTS_MAP,
   POLLING_INTERVAL,
   GLOBAL_DEFAULT_RANGE,
-} = require("./config");
-const { pushLatestData } = require("./websocket/ws-emitter");
+} = require("../config");
+const { pushLatestData } = require("../websocket/ws-emitter");
 const {
   saveHistoricalData,
   processAndStoreHistory,
-} = require("./database/db-client");
-const {startAlarmChecker} = require("./alarm/alarm-checker")
-const { initTableForToday, startDailyCleaner, historyProcessorLoop } = require("./functions/databasefunction");
+} = require("../database/db-client");
+const {startAlarmChecker} = require("../alarm/alarm-checker")
+const { initTableForToday, startDailyCleaner, historyProcessorLoop } = require("../functions/databasefunction");
 
 // =====================================================
 // ⚙️ CONFIGURABLE SETTINGS via .env

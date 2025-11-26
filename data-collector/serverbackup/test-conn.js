@@ -4,7 +4,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const url = require("url");
-const { PLCS } = require("./config");
+const { PLCS } = require("../config");
 
 const API_PORT = 3001;
 

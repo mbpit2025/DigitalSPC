@@ -7,9 +7,9 @@ const path = require("path");
 const { DateTime } = require("luxon");
 
 // Asumsi: File config.js, services/calibration.js, dan database/db-client.js tersedia
-const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("./config");
-const { calibrate } = require("./services/calibration");
-const { saveHistoricalData } = require("./database/db-client");
+const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("../config");
+const { calibrate } = require("../services/calibration");
+const { saveHistoricalData } = require("../database/db-client");
 
 // ============================================================
 // CONFIG / CONSTANTS

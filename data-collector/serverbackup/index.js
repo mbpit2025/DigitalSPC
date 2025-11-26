@@ -1,18 +1,18 @@
 // Core service untuk Polling Modbus TCP/IP, Logging DB, dan Push Real-time via WS
 
 const ModbusRTU = require("modbus-serial");
-const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("./config");
-const { pushLatestData } = require("./websocket/ws-emitter");
+const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("../config");
+const { pushLatestData } = require("../websocket/ws-emitter");
 const {
   saveHistoricalData,
   getLastDataTimestamp, // Diperlukan untuk inisialisasi dan pembersihan harian
   cleanDataOlderThanToday, // Diperlukan untuk pembersihan harian
   processAndStoreHistory, // Diperlukan untuk pemrosesan historis
-} = require("./database/db-client");
+} = require("../database/db-client");
 
 const { DateTime } = require("luxon");
 const cron = require("node-cron");
-const { calibrate } = require("./services/calibration");
+const { calibrate } = require("../services/calibration");
 const net = require("net");
 
 
