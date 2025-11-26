@@ -13,6 +13,8 @@ const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("./config");
 const { calibrate } = require("./services/calibration");
 const { saveHistoricalData } = require("./database/db-client");
 const { pushLatestData } = require("./websocket/ws-emitter");
+const {startAlarmChecker} = require("./alarm/alarm-checker")
+
 
 // ============================================================
 // CONFIG / CONST
@@ -440,4 +442,5 @@ server.listen(API_PORT, () => {
   periodicCheck(); // ping info
   connectAllPlcs(); // initial connect + schedules for reconnect
   pollingLoop(); // main polling loop
+  startAlarmChecker()
 });

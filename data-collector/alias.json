@@ -11,9 +11,21 @@
   "HEATING_LINE_1_data1": "data1 | Conveyor Speed",
   "HEATING_LINE_1_data10": "data10 | Shoe detection 1",
   "HEATING_LINE_1_data11": "data11 | Shoe Detection 2",
-  "HEATING_LINE_1_data2": "data2",
+  "HEATING_LINE_1_data2": "data2 | Preheat 1",
   "BPM_LINE_1_data10": "data10 | Hot 1 Qty",
   "BPM_LINE_1_data11": "data11 | Hot 2 Qty",
   "BPM_LINE_1_data12": "data12 | Cold",
-  "BPM_LINE_2_data1": "data1"
+  "BPM_LINE_2_data1": "data1",
+  "HEATING_LINE_1_data3": "data3 | Preheat 2",
+  "HEATING_LINE_1_data4": "data4 | Primer 1",
+  "HEATING_LINE_1_data5": "data5| Primer 1 Out",
+  "HEATING_LINE_1_data6": "data6 | Primer 2",
+  "HEATING_LINE_1_data7": "data7 | Primer 2Out",
+  "HEATING_LINE_1_data8": "data8 | Cementing",
+  "HEATING_LINE_1_data9": "data9 | Cementing Out",
+  "HEATING_LINE_1_data12": "data12 | Shoe Detection 3",
+  "HEATING_LINE_1_data13": "data13 | Shoe Detection 4",
+  "HEATING_LINE_1_data14": "data14 | Shoe Detection 5",
+  "HEATING_LINE_1_data15": "data15 | Shoe Detection 6",
+  "HEATING_LINE_1_data16": "data16"
 }

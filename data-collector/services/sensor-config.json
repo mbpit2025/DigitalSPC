@@ -9,9 +9,9 @@
     { "plc_id": "1", "tag_name": "data8", "sensor_type": "PT-100" },
     { "plc_id": "1", "tag_name": "data9", "sensor_type": "PT-100" },
     { "plc_id": "2", "tag_name": "data2", "sensor_type": "Infrared" },
-    { "plc_id": "2", "tag_name": "data2", "sensor_type": "Infrared" },
     { "plc_id": "2", "tag_name": "data3", "sensor_type": "Infrared" },
     { "plc_id": "2", "tag_name": "data4", "sensor_type": "Infrared" },
+    { "plc_id": "2", "tag_name": "data5", "sensor_type": "Infrared" },
     { "plc_id": "2", "tag_name": "data5", "sensor_type": "Infrared" },
     { "plc_id": "2", "tag_name": "data6", "sensor_type": "Infrared" },
     { "plc_id": "2", "tag_name": "data7", "sensor_type": "Infrared" },
@@ -90,7 +90,12 @@
     { "sensor": 1723, "temp": 436 },
     { "sensor": 1977, "temp": 603 },
     { "sensor": 2006, "temp": 648 },
-    { "sensor": 2100, "temp": 713 }
+    { "sensor": 2100, "temp": 713 },
+    { "sensor": 2200, "temp": 780 },
+    { "sensor": 2300, "temp": 850 },  
+    { "sensor": 2400, "temp": 920 },  
+    { "sensor": 2500, "temp": 990 },  
+    { "sensor": 2600, "temp": 1060 }
   ]
 }
 }
