@@ -53,17 +53,28 @@ const COLORS: { [key: string]: string } = {
 
 /** ====== FILLERS ====== */
 function fillDaily(data: DataRow[] = []) {
+  // cari jam paling awal dari data. Jika kosong, pakai jam sekarang
+  const baseHour = data.length > 0
+    ? Number(data[0].hour) // asumsinya data sudah sorted dari SQL
+    : new Date().getHours();
+
   const result: { hour: string; value: number | null }[] = [];
-  const now = new Date();
-  for (let i = 9; i >= 0; i--) {
-    const d = new Date(now);
-    d.setHours(now.getHours() - i);
-    const hour = d.getHours().toString().padStart(2, "0") + ":00";
-    const found = data.find((x) => Number(x.hour) === d.getHours());
-    result.push({ hour, value: found ? Number(found.value) : null });
+
+  for (let i = 0; i < 10; i++) {
+    const hourNum = (baseHour + i) % 24; // supaya tidak error kalau lewat jam 24
+    const hour = hourNum.toString().padStart(2, "0") + ":00";
+
+    const found = data.find((x) => Number(x.hour) === hourNum);
+
+    result.push({
+      hour,
+      value: found ? Number(found.value) : null
+    });
   }
+
   return result;
 }
+
 
 function fillWeekly(data: DataRow[] = []) {
   const result: { label: string; value: number | null }[] = [];
