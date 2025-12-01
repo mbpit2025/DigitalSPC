@@ -7,8 +7,8 @@ const {
 
 const JAKARTA_TZ = "Asia/Jakarta";
 const CHECK_INTERVAL_MS = POLLING_INTERVAL; // cek setiap 5 detik
-const ALARM_ACTIVE_DELAY_MS = 5000; // 1 menit
-const ALARM_RESOLVE_DELAY_MS = 5000; // 3 menit
+const ALARM_ACTIVE_DELAY_MS = 5000 * 12; // 1 menit
+const ALARM_RESOLVE_DELAY_MS = 5000 * 36; // 3 menit
 const AUTO_RESYNC_INTERVAL_MS = 60_000;
 
 // mapping tag_name PLC ke parameter standard

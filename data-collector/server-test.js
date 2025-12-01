@@ -14,6 +14,8 @@ const { calibrate } = require("./services/calibration");
 const { saveHistoricalData } = require("./database/db-client");
 const { pushLatestData } = require("./websocket/ws-emitter");
 const {startAlarmChecker} = require("./alarm/alarm-checker")
+const { initTableForToday, startDailyCleaner, historyProcessorLoop } = require("./functions/databasefunction");
+const { dbQuery } = require("./database/db-client");
 
 
 // ============================================================
@@ -221,7 +223,6 @@ async function safeReconnect(plc) {
 // ============================================================
 async function connectModbus(plc) {
   try {
-    // create a fresh client for initial connect (in case)
     try {
       plc.client.close(() => {});
     } catch {}
@@ -235,10 +236,10 @@ async function connectModbus(plc) {
     plc._backoff = RECONNECT_DELAY;
     attachSocketHandlers(plc);
 
-    console.log(`[PLC CONNECTED] ${plc.name} (${plc.ip}:${plc.port})`);
+    console.log(`[CONNECTING PLC] ${plc.name} (${plc.ip}:${plc.port})`);
   } catch (err) {
     plc.isConnected = false;
-    console.warn(`[PLC ERROR] ${plc.name}: ${err && err.message ? err.message : err}`);
+    console.warn(`[CONNECTING ERROR] ${plc.name}: ${err && err.message ? err.message : err}`);
     // schedule reconnect but don't block
     setTimeout(() => safeReconnect(plc).catch(() => {}), plc._backoff || RECONNECT_DELAY);
   }
@@ -249,7 +250,52 @@ async function connectAllPlcs() {
   for (const plc of plcList) {
     // small delay to avoid simultaneously spamming network
     await connectModbus(plc);
-    await delay(100);
+    await delay(300);
+  }
+}
+
+// 🔍 Ambil model aktif dan standar terkini (sekali per loop)
+async function refreshStandards() {
+  try {
+    const activeModels = {};
+    const activeModelName = {}; // lokal
+    const standards = {};
+
+    const modelRows = await dbQuery(`
+      SELECT line_name, model_id, model_name 
+      FROM line_model_status 
+      WHERE status = 'RUNNING' 
+      GROUP BY line_name
+    `);
+    for (const r of modelRows) {
+      activeModels[r.line_name] = r.model_id;
+      activeModelName[r.line_name] = r.model_name;
+    }
+
+    for (const [line, modelId] of Object.entries(activeModels)) {
+      const rows = await dbQuery(
+        `SELECT parameter_name, min_value, max_value FROM standard WHERE model_id = ?`,
+        [modelId]
+      );
+      const paramMap = {};
+      for (const r of rows) {
+        paramMap[r.parameter_name] = {
+          min: parseFloat(r.min_value),
+          max: parseFloat(r.max_value)
+        };
+      }
+      standards[line] = paramMap;
+    }
+
+    // Simpan ke cache global
+    activeModelsCache = activeModels;
+    activeModelNameCache = activeModelName; 
+    standardsCache = standards;
+
+    // Opsional: log untuk debug
+    // console.log("✅ Standards & models refreshed:", { activeModelsCache, activeModelNameCache, standardsCache: JSON.stringify(standardsCache) });
+  } catch (err) {
+    console.error("[STANDARD ERROR] Gagal memuat standar:", err);
   }
 }
 
@@ -258,6 +304,8 @@ async function connectAllPlcs() {
 // ============================================================
 async function readAndProcess(plc) {
   if (!plc.isConnected) return [];
+
+  await refreshStandards(); 
 
   try {
     const START = DATA_POINTS_MAP[0].register;
@@ -270,23 +318,40 @@ async function readAndProcess(plc) {
     const timestamp = DateTime.now().setZone(JAKARTA_TIMEZONE).toISO();
     const result = [];
 
-    DATA_POINTS_MAP.forEach((p, idx) => {
-      const raw = values[idx];
-      if (raw == null) return;
+DATA_POINTS_MAP.forEach((p, idx) => {
+  const raw = values[idx];
+  if (raw == null) return;
 
-      let calibrated = calibrate(String(plc.id), p.tag_name, raw);
-      // contoh rule scaling yang ada di kode lama
-      if (idx >= 1 && idx <= 8) calibrated = Number((calibrated / 10).toFixed(1));
+  let calibrated = calibrate(String(plc.id), p.tag_name, raw);
+  if (idx >= 1 && idx <= 8) {
+    calibrated = Number((calibrated / 10).toFixed(1));
+  }
 
-      result.push({
-        plc_id: String(plc.id),
-        plc_name: plc.name,
-        tag_name: p.tag_name,
-        raw_value: raw,
-        value: calibrated,
-        timestamp,
-      });
-    });
+  // Ambil line_name dari PLC atau dari DATA_POINTS_MAP (tergantung desain Anda)
+  // Misalnya: asumsikan setiap tag punya `line_name`, atau gunakan `plc.line_name`
+  const line_name = p.line_name || plc.line_name; // pastikan ini valid
+
+  // Ambil min/max dari cache standar jika tersedia
+  let min = null;
+  let max = null;
+  if (standardsCache[line_name] && standardsCache[line_name][p.tag_name]) {
+    min = standardsCache[line_name][p.tag_name].min;
+    max = standardsCache[line_name][p.tag_name].max;
+  }
+
+  result.push({
+    line_name: line_name,
+    model_id: activeModelsCache[line_name] || null,
+    model_name: activeModelNameCache[line_name] || null,
+    plc_id: plc.id,
+    plc_name: plc.name,
+    tag_name: p.tag_name,       
+    value: calibrated,           
+    min: min,
+    max: max,
+    timestamp: timestamp,
+  });
+});
 
     return result;
   } catch (e) {
@@ -320,8 +385,6 @@ async function pollingLoop() {
         // optional: attempt very cheap check like readCoils? but avoid heavy ops here
         // We'll rely on safeReconnect scheduling separately.
       }
-
-      // small delay between PLC reads to avoid burst
       await delay(DELAY_BETWEEN_PLCS_MS);
     }
 
@@ -358,10 +421,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
     try {
       pushLatestData(merged);
+      return res.end(JSON.stringify({ status: "success", timestamp: lastUpdateTimestamp, data: merged }));
     } catch (e) {
       // ignore websocket push errors
     }
-    return res.end(JSON.stringify({ status: "success", timestamp: lastUpdateTimestamp, data: merged }));
   }
 
   // API: update-alias
@@ -438,9 +501,14 @@ const server = http.createServer((req, res) => {
 // ============================================================
 server.listen(API_PORT, () => {
   console.log(`🚀 SERVER RUNNING → http://localhost:${API_PORT}`);
+  initTableForToday().then(() => {
+    startDailyCleaner();
+  });
+
   // Start background tasks
   periodicCheck(); // ping info
   connectAllPlcs(); // initial connect + schedules for reconnect
   pollingLoop(); // main polling loop
   startAlarmChecker()
+  historyProcessorLoop()
 });

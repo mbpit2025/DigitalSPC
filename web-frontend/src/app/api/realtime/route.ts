@@ -25,9 +25,30 @@ interface StoredNotification extends Notification {
 let latestData: DataPoint[] = [];
 const notifications: StoredNotification[] = [];
 
-export async function GET() {
-    // Return latestData and notifications as defined types
-    return NextResponse.json({ latestData, notifications });
+// Helper: Ambil nilai plcId dari query, handle multiple (opsional)
+function getPlcIdsFromQuery(searchParams: URLSearchParams): string[] | null {
+  const plcIdParam = searchParams.get("plcId");
+  if (!plcIdParam) return null;
+
+  // Mendukung: ?plcId=1,2,3 atau ?plcId=1
+  return plcIdParam.split(",").map(id => id.trim()).filter(id => id.length > 0);
+}
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = request.nextUrl;
+  const plcIdFilter = getPlcIdsFromQuery(searchParams);
+
+  let filteredData = latestData;
+
+  if (plcIdFilter) {
+    const filterSet = new Set(plcIdFilter);
+    filteredData = latestData.filter((item) => filterSet.has(item.plc_id));
+  }
+
+  return NextResponse.json({
+    latestData: filteredData,
+    notifications,
+  });
 }
 
 export async function POST(req: Request) {

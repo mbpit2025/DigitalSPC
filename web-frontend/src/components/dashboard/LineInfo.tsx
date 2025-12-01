@@ -3,32 +3,64 @@
 import React, { useMemo, useCallback } from 'react';
 import { useProductionSettings } from '@/hooks/useProductionSettings'; 
 
-// --- Interface untuk props komponen (Diperbarui) ---
 interface LineInfoProps {
   selectedLineName: string; // Contoh: "B1-01"
   selectedModel: string | null; // Nilai model saat ini dari state Dashboard
-  onModelChange: (value: string) => void; // Fungsi untuk mengubah state model di Dashboard
+  onModelChange: (value: string | null) => void; // Fungsi untuk mengubah state model di Dashboard
 }
 
 export default function LineInfo({ selectedLineName, selectedModel, onModelChange }: LineInfoProps) {
   
   // Ambil data dari hook (tetap diperlukan)
-  const { data, loading, error } = useProductionSettings(); 
+  const { data, loading, error, refetch } = useProductionSettings(); 
 
-  // Ambil data spesifik untuk line yang dipilih
   const lineData = useMemo(() => {
     if (data && selectedLineName) {
-      // Mengakses data stasiun spesifik berdasarkan nama line
       return data[selectedLineName]; 
     }
     return null;
   }, [data, selectedLineName]);
   
-  // Handler untuk perubahan pilihan model
-  const handleModelChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    // [PENTING]: Panggil fungsi setter dari props (mengubah state di komponen Dashboard)
-    onModelChange(event.target.value); 
-  }, [onModelChange]);
+ const handleModelChange = useCallback(async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newModel = event.target.value;
+    
+    // Panggil fungsi setter dari parent (untuk update state di Dashboard)
+    onModelChange(newModel);
+
+    // Kirim request ke backend untuk update database
+    try {
+      const response = await fetch('/api/pwi-api/update-line-model', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          line_name: selectedLineName,
+          model_name: newModel,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log(`✅ Model updated for ${selectedLineName}: ${newModel}`);
+        // Refresh data di hook agar UI update
+        refetch();
+      } else {
+        alert(`❌ Gagal update model: ${result.error || 'Unknown error'}`);
+        // Opsional: rollback state jika perlu
+        onModelChange(selectedModel); // kembalikan ke sebelumnya
+      }
+
+    } catch (err) {
+      console.error("🚨 Error updating model:", err);
+      alert("Gagal menghubungi server. Silakan coba lagi.");
+      onModelChange(selectedModel); // rollback
+    }
+
+  }, [selectedLineName, selectedModel, onModelChange, refetch]);
+
+
 
   // Fungsi untuk mendapatkan tanggal dan waktu saat ini
   const currentDate = new Date().toLocaleDateString('id-ID', {
@@ -81,14 +113,13 @@ export default function LineInfo({ selectedLineName, selectedModel, onModelChang
       <div className="text-gray-500 dark:text-gray-400 px-6 py-4 flex items-center gap-2">
         <label className="text-gray-500 dark:text-gray-400">MODEL :</label>
         <select
-          // Nilai dikontrol oleh state dari parent
           value={selectedModel || 'N/A'}
           onChange={handleModelChange}
           className="font-semibold text-orange-400 p-1 border border-gray-300 rounded-md bg-white dark:bg-gray-800 dark:border-gray-700"
-          disabled={!lineData.model.length}
+          disabled={!lineData?.model.length}
         >
-          {lineData.model.length === 0 && <option value="N/A">N/A</option>}
-          {lineData.model.map((model) => (
+          {lineData?.model.length === 0 && <option value="N/A">N/A</option>}
+          {lineData?.model.map((model) => (
             <option key={model} value={model}>
               {model}
             </option>

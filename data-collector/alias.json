@@ -27,5 +27,9 @@
   "HEATING_LINE_1_data13": "data13 | Shoe Detection 4",
   "HEATING_LINE_1_data14": "data14 | Shoe Detection 5",
   "HEATING_LINE_1_data15": "data15 | Shoe Detection 6",
-  "HEATING_LINE_1_data16": "data16"
+  "HEATING_LINE_1_data16": "data16",
+  "CHAMBER-01_data8": "data8 | Cementing Up",
+  "CHAMBER-01_data9": "data9 | Cementing Out",
+  "CHAMBER-01_data10": "data10",
+  "CHAMBER-01_data7": "data7 | Primer 2 Outsole"
 }

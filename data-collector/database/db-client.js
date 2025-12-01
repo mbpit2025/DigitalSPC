@@ -32,15 +32,19 @@ async function saveHistoricalData(data) {
   try {
     // Batch insert agar cepat & koneksi efisien
     const values = data.map((row) => [
+      row.line_name,
+      row.model_name,
       row.plc_id,
       row.plc_name,
       row.tag_name,
       row.value,
+      row.min,
+      row.max,
       row.timestamp,
     ]);
 
     const query = `
-      INSERT INTO plc_data (plc_id, plc_name, tag_name, value, timestamp)
+      INSERT INTO plc_data (line_name, model_name, plc_id, plc_name, tag_name, value, min, max, timestamp)
       VALUES ?
     `;
 
@@ -104,11 +108,25 @@ async function processAndStoreHistory(startTime, endTime) {
     await conn.beginTransaction();
 
     const insertQuery = `
-      INSERT INTO plc_history (plc_id, tag_name, avg_value, start_time, end_time)
+      INSERT INTO plc_history (
+        plc_id, 
+        tag_name, 
+        avg_value, 
+        line_name, 
+        model_name, 
+        min, 
+        max, 
+        start_time, 
+        end_time
+      )
       SELECT
         plc_id,
         tag_name,
         AVG(value) AS avg_value,
+        MIN(line_name) AS line_name,
+        MIN(model_name) AS model_name,
+        MIN(min) AS min,
+        MIN(max) AS max,
         ? AS start_time,
         ? AS end_time
       FROM plc_data
@@ -116,16 +134,19 @@ async function processAndStoreHistory(startTime, endTime) {
       GROUP BY plc_id, tag_name
       ON DUPLICATE KEY UPDATE
         avg_value = VALUES(avg_value),
-        end_time = VALUES(end_time);
+        end_time = VALUES(end_time),
+        line_name = VALUES(line_name),
+        model_name = VALUES(model_name),
+        min = VALUES(min),
+        max = VALUES(max);
     `;
 
     const params = [startTime, endTime, startTime, endTime];
-    const [res] = await conn.query(insertQuery, params);
+    const [result] = await conn.query(insertQuery, params);
 
     await conn.commit();
-    console.log(`[DB HISTORY] ${res.affectedRows} baris diproses ke plc_history.`);
-
-    return { processed: res.affectedRows, deleted: 0 };
+    console.log(`[DB HISTORY] ${result.affectedRows} baris diproses ke plc_history.`);
+    return { processed: result.affectedRows || 0 };
   } catch (err) {
     await conn.rollback();
     console.error("[DB ERROR] Gagal memproses data history:", err);

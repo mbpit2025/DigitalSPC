@@ -3,9 +3,9 @@ import { dbQuery } from "@/app/lib/db";
 
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ period:  "daily" | "weekly" | "monthly" }> }
+  { params }: { params: Promise<{ period: "daily" | "weekly" | "monthly" }> }
 ) {
-  const { period } = await params; // tidak perlu await
+  const { period } = await params;
   const search = new URL(request.url).searchParams;
 
   const category = search.get("cat");
@@ -29,49 +29,70 @@ export async function GET(
   }
 
   // ======================================
-  // 📌 Base SQL berdasarkan period
+  // 📌 Base SQL berdasarkan period — SUDAH MENYERTAKAN line_name, model_name, min, max
   // ======================================
   let sql = "";
   switch (period) {
     case "daily":
       sql = `
-        SELECT p.name AS plc_name, h.tag_name, HOUR(h.start_time) AS hour,
-               MAX(h.avg_value) AS value
+        SELECT 
+          p.name AS plc_name, 
+          h.tag_name, 
+          HOUR(h.start_time) AS hour,
+          MAX(h.avg_value) AS value,
+          h.line_name,
+          h.model_name,
+          h.min,
+          h.max
         FROM plc_history h
         JOIN plcs p ON h.plc_id = p.plc_id
         WHERE h.tag_name IN (${tags.map(() => "?").join(",")})
           AND DATE(h.start_time) = CURDATE()
           ${categorySQL}
-        GROUP BY p.name, h.tag_name, hour
+        GROUP BY p.name, h.tag_name, hour, h.line_name, h.model_name, h.min, h.max
         ORDER BY hour ASC;
       `;
       break;
 
     case "weekly":
       sql = `
-        SELECT p.name AS plc_name, h.tag_name, DATE(h.start_time) AS day,
-               FLOOR(HOUR(h.start_time)/3) AS range_3,
-               MAX(h.avg_value) AS value
+        SELECT 
+          p.name AS plc_name, 
+          h.tag_name, 
+          DATE(h.start_time) AS day,
+          FLOOR(HOUR(h.start_time)/3) AS range_3,
+          MAX(h.avg_value) AS value,
+          h.line_name,
+          h.model_name,
+          h.min,
+          h.max
         FROM plc_history h
         JOIN plcs p ON h.plc_id = p.plc_id
         WHERE h.tag_name IN (${tags.map(() => "?").join(",")})
           AND h.start_time >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
           ${categorySQL}
-        GROUP BY p.name, h.tag_name, day, range_3
+        GROUP BY p.name, h.tag_name, day, range_3, h.line_name, h.model_name, h.min, h.max
         ORDER BY day ASC, range_3 ASC;
       `;
       break;
 
     case "monthly":
       sql = `
-        SELECT p.name AS plc_name, h.tag_name, DATE(h.start_time) AS day,
-               AVG(h.avg_value) AS value
+        SELECT 
+          p.name AS plc_name, 
+          h.tag_name, 
+          DATE(h.start_time) AS day,
+          AVG(h.avg_value) AS value,
+          h.line_name,
+          h.model_name,
+          h.min,
+          h.max
         FROM plc_history h
         JOIN plcs p ON h.plc_id = p.plc_id
         WHERE h.tag_name IN (${tags.map(() => "?").join(",")})
           AND MONTH(h.start_time) = MONTH(CURDATE())
           ${categorySQL}
-        GROUP BY p.name, h.tag_name, day
+        GROUP BY p.name, h.tag_name, day, h.line_name, h.model_name, h.min, h.max
         ORDER BY day ASC;
       `;
       break;

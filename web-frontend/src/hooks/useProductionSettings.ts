@@ -1,8 +1,7 @@
 // src/hooks/useProductionSettings.ts
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 
-// --- Interfaces berdasarkan API /api/settings ---
 
 interface StationData {
   model: string[];
@@ -18,7 +17,7 @@ interface ProductionLine {
   target: string;
 }
 
-// Konstanta untuk Polling
+
 const POLLING_INTERVAL = 10000; // Melakukan fetch ulang setiap 10 detik
 
 /**
@@ -32,28 +31,38 @@ export function useProductionSettings(apiUrl: string = `/api/pwi-api/line-data`)
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
+    // --- Fungsi untuk refetch manual ---
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error(`Failed to fetch settings: ${response.statusText} (${response.status})`);
+      const json: APISettingsResponse = await response.json();
+      if (JSON.stringify(data) !== JSON.stringify(json)) setData(json);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching production settings:", err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiUrl, data, setLoading, setData, setError]);
+
   useEffect(() => {
-    // Fungsi async untuk melakukan fetching data
     const fetchData = async () => {
-      // Tidak mereset loading state ke true saat polling berulang, 
-      // hanya set true saat initial load untuk menghindari flicker UI.
       if (data === null) {
           setLoading(true);
       }
-      
       try {
         const response = await fetch(apiUrl);
         if (!response.ok) {
           throw new Error(`Failed to fetch settings: ${response.statusText} (${response.status})`);
         }
         const json: APISettingsResponse = await response.json();
-        
-        // Update state hanya jika data benar-benar berbeda
-        // Ini membantu mencegah komponen lain yang menggunakan hook ini render ulang jika datanya sama.
         if (JSON.stringify(data) !== JSON.stringify(json)) {
             setData(json);
         }
-        setError(null); // Bersihkan error jika fetch berhasil
+        setError(null); 
       } catch (err) {
         // Tangani error, tetapi biarkan data lama (jika ada) tetap terlihat.
         console.error("Error fetching production settings:", err);
@@ -63,22 +72,15 @@ export function useProductionSettings(apiUrl: string = `/api/pwi-api/line-data`)
       }
     };
 
-    // 1. Lakukan fetch segera saat komponen mount (initial load)
     fetchData(); 
 
     // 2. Setup Polling: Lakukan fetch ulang setiap POLLING_INTERVAL
     const intervalId = setInterval(() => {
       fetchData(); 
     }, POLLING_INTERVAL);
-
-    // 3. Cleanup: Hentikan timer polling saat komponen unmount
     return () => clearInterval(intervalId);
+  }, [apiUrl, data]); 
 
-  }, [apiUrl, data]); // Menambahkan data sebagai dependency (untuk check di JSON.stringify)
-
-  // --- Data Transformation (Menggunakan useMemo untuk Efisiensi) ---
-  
-  // 1. Daftar Line Produksi (dengan data target)
   const productionLines: ProductionLine[] = useMemo(() => {
     if (!data) return [];
     
@@ -106,10 +108,11 @@ export function useProductionSettings(apiUrl: string = `/api/pwi-api/line-data`)
 
   return {
     data,                     
-    productionLines,          // Array: [{ lineName: "B1-01", target: "168" }, ...]
-    uniqueModels,             // Array: ["ME420", "ML515", ...]
+    productionLines,       
+    uniqueModels,          
     loading,
     error,
-    isPolling: true,          // Tambahan informasi bahwa hook menggunakan polling
+    isPolling: true,
+    refetch         
   };
 }
