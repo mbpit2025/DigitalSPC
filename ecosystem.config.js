@@ -9,8 +9,8 @@ module.exports = {
       name      : 'spc-api',
       cwd       : './data-collector', // Lokasi direktori API
       script    : 'server-test.js',  // File yang dieksekusi
-      instances : '6',              // Cluster mode: Gunakan semua core CPU
-      exec_mode : 'fork',
+      instances : '1',              // Cluster mode: Gunakan semua core CPU
+      exec_mode : 'cluster',
       watch     : false,              // Matikan watching untuk produksi
       // Opsional: Tambahkan ini jika Anda menggunakan 'import/export' di Node.js
       // node_args : '--experimental-modules', 

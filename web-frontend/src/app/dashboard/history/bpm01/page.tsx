@@ -361,8 +361,10 @@ const fetchData = useCallback(async () => {
             <Line data={dailyHotData} options={CHART_OPTIONS} />
             </div>
           </ChartCard>
+
           <ChartCard title="Daily - Cold Temp">
             <div className="h-64 md:h-72 lg:h-80">
+
             <Line data={dailyColdData} options={CHART_OPTIONS} />
             </div>
           </ChartCard>
@@ -370,6 +372,7 @@ const fetchData = useCallback(async () => {
           {/* WEEKLY */}
           <ChartCard title="Weekly - Hot Temp">
             <div className="h-64 md:h-72 lg:h-80">
+  
             <Line data={weeklyHotData} options={CHART_OPTIONS} />
             </div>
           </ChartCard>
@@ -378,7 +381,6 @@ const fetchData = useCallback(async () => {
             <Line data={weeklyColdData} options={CHART_OPTIONS} />
             </div>
           </ChartCard>
-
           {/* MONTHLY */}
           <ChartCard title="Monthly - Hot Temp">
             <div className="h-64 md:h-72 lg:h-80">

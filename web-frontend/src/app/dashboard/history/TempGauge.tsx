@@ -42,8 +42,8 @@ const TempGauge: React.FC<TempGaugeProps> = ({ min, max, value, label, qty, time
   }, []);
 
   return (
-    <div className="flex flex-col items-center w-full">
-      <div ref={containerRef} className="w-full" style={{ height: 'auto' }}>
+    <div className="flex flex-col items-center justify-center w-full">
+      <div ref={containerRef} className="w-full flex justify-center" style={{ height: 'auto' }}>
         {gaugeSize.width > 0 && (
           <AnyGauge
             type="semicircle"

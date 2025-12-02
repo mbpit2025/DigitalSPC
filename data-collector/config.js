@@ -3,61 +3,51 @@
 
 // Definisi 6 PLC (Minimalis)
 const PLCS = [
-    { 
-      id: "1", name: 'BPM-01', ip: '10.2.13.74', port: 502, unitId: 1, 
-      tagRanges: {
-          // Range 1: Diterapkan ke data1, data2, data3
-          'data2|data3|data8|data9': { min: 80, max: 90 }, 
-          // Range 2: Diterapkan ke data4, data5, data6
-          'data4|data5|data6|data7': { min: 27, max: 30 }, 
-          // Range Default jika tidak ada yang cocok
-          'default': { min: 50, max: 55 }
-      } 
-    },
-    { 
-      id: "2", name: 'CHAMBER-01', ip: '10.2.13.75', port: 502, unitId: 2,
-      tagRanges: {
-          'data4|data5': { min: 50.7, max: 54 }, // primer1
-          'data6|data7': { min: 51, max: 55 }, //primer2 
-          'data8|data9': { min: 61, max: 64 }, // cementing
-          'default': { min: 75, max: 77 }
-      } 
-    },
-    { id: "3", name: 'CHILLER-01', ip: '10.2.13.76', port: 502, unitId: 3,
-        tagRanges: {
-          'default': { min: 26, max: 29 }
-      }
-    },
-    { id: "4", name: 'BPM-02', ip: '10.2.13.77', port: 502, unitId: 4,
-              tagRanges: {
-          // Range 1: Diterapkan ke data1, data2, data3
-          'data2|data3|data8|data9': { min: 80, max: 90 }, 
-          // Range 2: Diterapkan ke data4, data5, data6
-          'data4|data5|data6|data7': { min: 15, max: 25 }, 
-          // Range Default jika tidak ada yang cocok
-          'default': { min: 50, max: 55 }
-      } 
-     },
-    { id: "5", name: 'CHAMBER-02', ip: '10.2.13.78', port: 502, unitId: 5,
-      tagRanges: {
-          'data4|data5': { min: 50.5, max: 54.8 }, // primer1
-          'data6|data7': { min: 51, max: 55 }, //primer2 
-          'data8|data9': { min: 60.5, max: 64 }, // cementing
-          'default': { min: 73, max: 78 }
-      } 
-     },
-    { id: "6", name: 'CHILLER-02', ip: '10.2.13.95', port: 502, unitId: 6,
-        tagRanges: {
-          'default': { min: 26, max: 29 }
-      }
-     }
+  { id: "1", name: 'BPM-01', ip: '10.2.13.74', port: 502, unitId: 1 },
+  { id: "2", name: 'CHAMBER-01', ip: '10.2.13.75', port: 502, unitId: 2 },
+  { id: "3", name: 'CHILLER-01', ip: '10.2.13.76', port: 502, unitId: 3 },
+  { id: "4", name: 'BPM-02', ip: '10.2.13.77', port: 502, unitId: 4 },
+  { id: "5", name: 'CHAMBER-02', ip: '10.2.13.78', port: 502, unitId: 5 },
+  { id: "6", name: 'CHILLER-02', ip: '10.2.13.95', port: 502, unitId: 6 },
 ];
+
+// --- AUTO ASSIGN line_name based on plc_id ---
+PLCS.forEach(plc => {
+  const plcIdNum = parseInt(plc.id);
+  if (plcIdNum >= 1 && plcIdNum <= 3) {
+    plc.line_name = "B1-01";
+  } else if (plcIdNum >= 4 && plcIdNum <= 6) {
+    plc.line_name = "B1-02";
+  } else {
+    plc.line_name = `UNKNOWN_LINE_${plc.id}`; // fallback untuk keamanan
+  }
+});
+
+
+// --- TAG RANGES (tetap seperti sebelumnya) ---
+PLCS.forEach(plc => {
+  plc.tagRanges = {
+    ...(plc.name.includes('BPM') ? {
+      'data2|data3|data8|data9': { min: 80, max: 90 },
+      'data4|data5|data6|data7': { min: 27, max: 30 },
+    } : {}),
+    ...(plc.name.includes('CHAMBER') ? {
+      'data4|data5': { min: 50.7, max: 54 },
+      'data6|data7': { min: 51, max: 55 },
+      'data8|data9': { min: 61, max: 64 },
+    } : {}),
+    ...(plc.name.includes('CHILLER') ? {
+      'default': { min: 26, max: 29 }
+    } : {}),
+    'default': { min: 50, max: 55 }
+  };
+});
 
 
 const DATA_POINTS_MAP = [];
 const START_REGISTER = 5000;
 const TOTAL_POINTS = 26;
-const GLOBAL_DEFAULT_RANGE = { min: 50, max: 55 }; // Jika tidak ada konfigurasi spesifik
+const GLOBAL_DEFAULT_RANGE = { min: 0, max: 1 }; // Jika tidak ada konfigurasi spesifik
 const HISTORY_WINDOW_MINUTES = 10;
 
 
@@ -71,7 +61,7 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
 }
 
 // Interval Polling (dalam milidetik)
-const POLLING_INTERVAL = 10000; // 10 detik
+const POLLING_INTERVAL = 5000; // 5 detik
 
 module.exports = {
     PLCS,

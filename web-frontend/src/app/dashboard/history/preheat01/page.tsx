@@ -198,7 +198,7 @@ const TIME_TAGS: Record<string, string> = {
     // Fungsi untuk memperbarui gauge data
     const updateGaugeData = async () => {
       try {
-        const result = await fetchRealtime("1");
+        const result = await fetchRealtime("2");
         if (!result?.latestData) return;
 
         const tempData: Record<string, DataRow> = {};
@@ -317,27 +317,11 @@ const fetchData = useCallback(async () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-          <div className="flex flex-col text-white p-3 gap-3 items-center border border-red-500 rounded-xl bg-red-900/20">
-            <h2 className="font-bold text-lg">HOT TEMP</h2>
+        <div className="grid grid-cols-1 gap-4 w-full">
+          <div className="grid grid-cols-2 text-white p-3 gap-3 border border-red-500 rounded-xl bg-red-900/20 h-[300px]">
+            <h2 className="font-bold text-lg col-span-2 text-center w-full">PREHEAT TEMP</h2>
             {gaugeData
               .filter(g => g.label.startsWith("Hot"))
-              .map((g, i) => (
-                <TempGauge
-                  key={i}
-                  min={g.min}
-                  max={g.max}
-                  value={g.value}
-                  label={g.label}
-                  qty={g.qty}
-                  time={g.time}
-                />
-              ))}
-          </div>
-          <div className="flex flex-col text-white p-3 gap-3 items-center border border-blue-500 rounded-xl bg-blue-900/20">
-            <h2 className="font-bold text-lg">COLD TEMP</h2>
-            {gaugeData
-              .filter(g => g.label.startsWith("Cold"))
               .map((g, i) => (
                 <TempGauge
                   key={i}
@@ -420,7 +404,7 @@ function createChartData(
     return {
       label: `${tag} (${cell})`,
       borderColor: COLORS[tag] ?? "gray",
-      backgroundColor: "transparent", // or remove if not needed
+      backgroundColor: "transparent",
       borderWidth: 2,
       data: values,
       fill: false,
@@ -428,7 +412,7 @@ function createChartData(
     };
   });
 
-  // === Min & Max reference lines ===
+  // === Tambahkan garis referensi MIN & MAX (dengan warna & label benar) ===
   tags.forEach((tag) => {
     const rawPoints = groupedData[tag] || [];
     if (rawPoints.length === 0) return;
@@ -437,29 +421,33 @@ function createChartData(
     const minVal = firstPoint.min;
     const maxVal = firstPoint.max;
 
+    // ✅ Min: hijau, label "Min Standard"
     if (typeof minVal === "number") {
       datasets.push({
         label: `Min Standard (${tag})`,
         data: Array(labels.length).fill(minVal),
-        borderColor: "rgba(255, 0, 0, 0.7)",
+        borderColor: "rgba(0, 255, 0, 0.7)",   // ✅ HIJAU untuk MIN
         borderWidth: 1,
-        borderDash: [5, 5],
+        borderDash: [4, 4],
         pointRadius: 0,
         fill: false,
         showLine: true,
+        tension: 0,
       });
     }
 
+    // ✅ Max: merah, label "Max Standard"
     if (typeof maxVal === "number") {
       datasets.push({
         label: `Max Standard (${tag})`,
         data: Array(labels.length).fill(maxVal),
-        borderColor: "rgba(0, 255, 0, 0.7)",
+        borderColor: "rgba(255, 0, 0, 0.7)",   // ✅ MERAH untuk MAX
         borderWidth: 1,
-        borderDash: [5, 5],
+        borderDash: [4, 4],
         pointRadius: 0,
         fill: false,
         showLine: true,
+        tension: 0,
       });
     }
   });

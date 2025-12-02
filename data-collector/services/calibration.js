@@ -53,38 +53,86 @@ function lookupConvert(sensorType, rawValue) {
 /**
  * Fungsi Utama Kalibrasi
  */
+// function calibrate(plc_id, tag_name, rawValue) {
+//   const sensorMapping = sensorRegistry.find(reg => 
+//     reg.plc_id == plc_id && reg.tag_name == tag_name
+//   );
+
+//   if (!sensorMapping) return rawValue;
+
+//   const sensorType = sensorMapping.sensor_type;
+
+//   // ✅ 1. Coba lookup dulu
+//   const lookupResult = lookupConvert(sensorType, rawValue);
+//   if (lookupResult !== null) {
+//     return lookupResult;
+//   }
+
+//   // ✅ 2. Jika tidak ada lookup, fallback ke formula lama
+//   const configs = kalibrasiConfigs[sensorType];
+//   if (!configs) return rawValue;
+
+//   const segmen = configs.find(conf => 
+//     rawValue >= conf.raw_min && rawValue < conf.raw_max
+//   );
+
+//   if (!segmen) return rawValue;
+
+//   // ganti x dengan rawValue lalu hitung
+//   const formulaTerformat = segmen.formula.replace(/x/g, rawValue);
+
+//   try {
+//     const calibratedValue = evaluate(formulaTerformat); 
+//     console.log(`Kalibrasi: [${plc_id} - ${tag_name}] Raw: ${rawValue} => Calibrated: ${calibratedValue}`);
+//     return calibratedValue;
+//   } catch (error) {
+//     return rawValue;
+//   }
+// }
+
 function calibrate(plc_id, tag_name, rawValue) {
   const sensorMapping = sensorRegistry.find(reg => 
     reg.plc_id == plc_id && reg.tag_name == tag_name
   );
 
-  if (!sensorMapping) return rawValue;
+  if (!sensorMapping) {
+    console.warn(`[SKIP] ❓ Tidak ada mapping: plc_id=${plc_id}, tag=${tag_name}`);
+    return rawValue;
+  }
 
   const sensorType = sensorMapping.sensor_type;
+  console.debug(`[CALIB] Memproses ${plc_id}-${tag_name} | Raw=${rawValue} | Type=${sensorType}`);
 
   // ✅ 1. Coba lookup dulu
   const lookupResult = lookupConvert(sensorType, rawValue);
   if (lookupResult !== null) {
+    console.log(`Kalibrasi [LOOKUP]: [${plc_id} - ${tag_name}] Raw: ${rawValue} => ${lookupResult}`);
     return lookupResult;
   }
 
-  // ✅ 2. Jika tidak ada lookup, fallback ke formula lama
+  // ✅ 2. Fallback ke formula
   const configs = kalibrasiConfigs[sensorType];
-  if (!configs) return rawValue;
+  if (!configs) {
+    console.warn(`[SKIP] ❗ Tidak ada rules/lookup untuk sensor type: "${sensorType}"`);
+    return rawValue;
+  }
 
   const segmen = configs.find(conf => 
     rawValue >= conf.raw_min && rawValue < conf.raw_max
   );
 
-  if (!segmen) return rawValue;
+  if (!segmen) {
+    console.warn(`[SKIP] 📏 Raw value ${rawValue} di luar range kalibrasi untuk ${sensorType} (${plc_id}-${tag_name})`);
+    return rawValue;
+  }
 
-  // ganti x dengan rawValue lalu hitung
   const formulaTerformat = segmen.formula.replace(/x/g, rawValue);
-
   try {
     const calibratedValue = evaluate(formulaTerformat); 
+    console.log(`Kalibrasi [FORMULA]: [${plc_id} - ${tag_name}] Raw: ${rawValue} => ${calibratedValue}`);
     return calibratedValue;
   } catch (error) {
+    console.error(`[ERROR] Evaluasi gagal untuk ${plc_id}-${tag_name}:`, error.message);
     return rawValue;
   }
 }

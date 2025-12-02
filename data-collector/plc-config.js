@@ -32,7 +32,7 @@ module.exports = {
     DATA_POINTS_MAP,
     PLCS_CONFIG,
     API_PORT: 3005,
-    POLLING_INTERVAL_MS: 1000,       // Interval polling (1 detik)
+    POLLING_INTERVAL_MS: 3000,       // Interval polling (1 detik)
     CONNECTION_TIMEOUT_MS: 5000,     // Timeout koneksi Modbus (5 detik)
     DELAY_BETWEEN_PLCS_MS: 200,      // Jeda antar polling PLC (0.2 detik)
 };

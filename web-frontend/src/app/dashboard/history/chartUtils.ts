@@ -1,4 +1,4 @@
-import { TooltipItem } from 'chart.js';
+import Chart, { ChartOptions } from 'chart.js/auto';
 
 type DataRow = {
   hour?: number;
@@ -64,66 +64,43 @@ function fillMonthly(data: DataRow[] = []): { label: string; value: number | nul
 
 
 
-const CHART_OPTIONS = {
+const CHART_OPTIONS: ChartOptions<"line"> = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
       labels: {
-        color: '#FFFFFF',
-        font: {
-          size: 11,
-          weight: 'normal' as const,
-        },
-        filter: (item : { text: string }) => !item.text.includes("Standard"),
-      },
+        generateLabels: (chart) => {
+          const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+          return labels.map(label => ({
+            ...label,
+            fontStyle: label.text.includes("Standard") ? "italic" : "normal",
+            fontColor: label.text.includes("Min") ? "green" :
+                       label.text.includes("Max") ? "red" : undefined,
+          }));
+        }
+      }
     },
     tooltip: {
-      callbacks: {
-        label: function(context: TooltipItem<'line'>) {
-          return `${context.dataset.label}: ${context.raw}`;
-        },
-      },
-      backgroundColor: '#2D2D2D',
-      titleColor: '#FFFFFF',
-      bodyColor: '#FFFFFF',
-      borderColor: '#666',
-      borderWidth: 1,
-      padding: 10,
-      cornerRadius: 6,
+      mode: "index" as const,
+      intersect: false,
     },
   },
-  spanGaps: true,
   scales: {
     x: {
-      grid: {
-        color: 'rgba(255, 255, 255, 0.1)',
-        lineWidth: 1,
-      },
-      ticks: {
-        color: '#FFFFFF',
-        font: {
-          size: 12,
-        },
-      },
+      grid: { display: false },
     },
     y: {
-      grid: {
-        color: 'rgba(255, 255, 255, 0.1)',
-        lineWidth: 1,
-      },
+      beginAtZero: false,
       ticks: {
-        color: '#FFFFFF',
-        font: {
-          size: 12,
-        },
-        callback: function(value: string | number) {
-          return typeof value === 'number' && Number.isInteger(value) 
-            ? value 
-            : Number(value).toFixed(1);
-        },
-      },
-    },
+        callback: (value: string | number) => `${value}°C`,
+      }
+    }
+  },
+  interaction: {
+    mode: "nearest" as const,
+    axis: "x" as const,
+    intersect: false,
   },
 };
 
