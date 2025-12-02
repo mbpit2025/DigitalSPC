@@ -6,20 +6,14 @@ module.exports = {
     // 1. Aplikasi Backend: spc-api (data-collector)
     // ----------------------------------------
     {
-      name      : 'spc-api',
+      name      : 'spc-api-real',
       cwd       : './data-collector', // Lokasi direktori API
       script    : 'server-test.js',  // File yang dieksekusi
       instances : '1',              // Cluster mode: Gunakan semua core CPU
       exec_mode : 'cluster',
-      watch     : false,              // Matikan watching untuk produksi
-      // Opsional: Tambahkan ini jika Anda menggunakan 'import/export' di Node.js
-      // node_args : '--experimental-modules', 
-
+      watch     : false,  
       restart_delay: 1000, 
-      // Maksimal coba restart 10 kali
       max_restarts: 20,
-      
-      
       error_file: '../logs/api-err.log',
       out_file  : '../logs/api-out.log',
       
@@ -33,7 +27,28 @@ module.exports = {
     },
 
     // ----------------------------------------
-    // 2. Aplikasi Frontend: spc-frontend (Next.js)
+    // 2. Aplikasi Backend Dummy: spc-api (data-collector)
+    // ----------------------------------------
+    {
+      name      : 'spc-api-dummy',
+      cwd       : './data-collector',
+      script    : 'dummy-server.js',
+      instances : 1,
+      exec_mode : 'cluster',
+      watch     : false,
+      windowsHide: true,
+      restart_delay: 1000,
+      max_restarts: 20,
+      error_file: '../logs/api-dummy-err.log',
+      out_file  : '../logs/api-dummy-out.log',
+      env_production : {
+        NODE_ENV: 'production',
+        PORT: 3001
+      }
+    },
+
+    // ----------------------------------------
+    // 3. Aplikasi Frontend: spc-frontend (Next.js)
     // ----------------------------------------
     {
       name: 'spc-frontend',

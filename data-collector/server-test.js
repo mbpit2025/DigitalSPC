@@ -319,7 +319,7 @@ async function readAndProcess(plc) {
       // Di pemanggil (misal: parser PLC):
       const rawNum = Number(raw);
       if (isNaN(rawNum)) {
-        console.warn(`[SKIP] Nilai non-numerik: ${raw} (${plc.id}-${p.tag_name})`);
+        // console.warn(`[SKIP] Nilai non-numerik: ${raw} (${plc.id}-${p.tag_name})`);
         return raw;
       }
 

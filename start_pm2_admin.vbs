@@ -1,4 +1,3 @@
-Set shell = CreateObject("WScript.Shell")
-
-' Jalankan batch file dengan akses admin (RunAs)
-shell.Run "cmd.exe /c start """" ""start_ecosystem.bat""", 0, False
+Set UAC = CreateObject("Shell.Application")
+' Ganti "start_ecosystem.bat" dengan nama file bat utama Anda
+UAC.ShellExecute "start_ecosystem.bat", "", "", "runas", 1
