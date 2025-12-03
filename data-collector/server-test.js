@@ -524,10 +524,8 @@ const server = http.createServer(async (req, res) => {
 // ============================================================
 server.listen(API_PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${API_PORT}`);
-
   await initTableForToday().catch(console.error);
   startDailyCleaner();
-
   periodicCheck();
   connectAllPlcs();
   pollingLoop();
