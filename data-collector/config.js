@@ -32,12 +32,13 @@ PLCS.forEach(plc => {
       'data4|data5|data6|data7': { min: 27, max: 30 },
     } : {}),
     ...(plc.name.includes('CHAMBER') ? {
+      'data2|data3': { min: 75.7, max: 79 },
       'data4|data5': { min: 50.7, max: 54 },
       'data6|data7': { min: 51, max: 55 },
       'data8|data9': { min: 61, max: 64 },
     } : {}),
     ...(plc.name.includes('CHILLER') ? {
-      'default': { min: 26, max: 29 }
+      'data2|data3': { min: 26, max: 29 }
     } : {}),
     'default': { min: 50, max: 55 }
   };
@@ -48,7 +49,9 @@ const DATA_POINTS_MAP = [];
 const START_REGISTER = 5000;
 const TOTAL_POINTS = 26;
 const GLOBAL_DEFAULT_RANGE = { min: 0, max: 1 }; // Jika tidak ada konfigurasi spesifik
-const HISTORY_WINDOW_MINUTES = 10;
+const HISTORY_WINDOW_MINUTES = 15;
+const HISTORY_PROCESS_DELAY_MINUTES = 2; // tunda pemrosesan 2 menit
+const POLLING_INTERVAL = 5000;  
 
 
 for (let i = 0; i < TOTAL_POINTS; i++) {
@@ -59,14 +62,11 @@ for (let i = 0; i < TOTAL_POINTS; i++) {
         count: 1,
     });
 }
-
-// Interval Polling (dalam milidetik)
-const POLLING_INTERVAL = 5000; // 5 detik
-
 module.exports = {
     PLCS,
     DATA_POINTS_MAP,
     POLLING_INTERVAL,
     GLOBAL_DEFAULT_RANGE,
     HISTORY_WINDOW_MINUTES,
+    HISTORY_PROCESS_DELAY_MINUTES,
 };

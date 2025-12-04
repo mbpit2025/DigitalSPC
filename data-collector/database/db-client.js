@@ -1,9 +1,12 @@
+// ─── 1. DEKLARASI MODUL ───────────────────────────────
 const mysql = require("mysql2/promise");
 const { DateTime } = require("luxon");
+const fs = require('fs');
+const path = require('path');
 
 const JAKARTA_TIMEZONE = "Asia/Jakarta";
 
-// 🔒 Gunakan singleton agar pool tidak dibuat berulang kali
+// ─── 2. POOL MYSQL (singleton) ────────────────────────
 const globalForMySQL = globalThis;
 const pool =
   globalForMySQL._mysqlPool ||
@@ -23,9 +26,50 @@ if (!globalForMySQL._mysqlPool) {
   console.log("[DB] Pool MySQL dibuat (singleton).");
 }
 
-// -------------------------------------------------------------
-// ✅ Simpan Data Mentah (lebih efisien & aman)
-// -------------------------------------------------------------
+// ─── 3. FUNGSI BANTU (harus di atas fungsi utama!) ────
+
+function formatDate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function getLogFilePathForTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) {
+    throw new Error(`Timestamp tidak valid: ${timestamp}`);
+  }
+  return path.join(__dirname, 'logs', `plc-${formatDate(date)}.log`);
+}
+
+function getDateRange(start, end) {
+  const dates = [];
+  const current = new Date(start);
+  current.setHours(0, 0, 0, 0);
+  const endDay = new Date(end);
+  endDay.setHours(0, 0, 0, 0);
+
+  while (current <= endDay) { // <= agar mencakup hari terakhir
+    dates.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+}
+
+async function dbQuery(sql, params = []) {
+  try {
+    const [rows] = await pool.query(sql, params);
+    return rows;
+  } catch (err) {
+    console.error("[DB ERROR] Query gagal:", err);
+    throw err;
+  }
+}
+
+
+// ─── 4. FUNGSI UTAMA ──────────────────────────────────
+
 async function saveHistoricalData(data) {
   if (!Array.isArray(data) || data.length === 0) return;
 
@@ -59,6 +103,50 @@ async function saveHistoricalData(data) {
     }
   } catch (err) {
     console.error("[DB ERROR] Gagal menyimpan data:", err);
+  }
+}
+
+
+async function saveHistoricalDataLog(data) {
+  if (!Array.isArray(data) || data.length === 0) return;
+
+  try {
+    const groups = new Map();
+
+    for (const row of data) {
+      if (!row?.timestamp) {
+        console.warn("[LOG] Data tanpa timestamp diabaikan:", row);
+        continue;
+      }
+      const logPath = getLogFilePathForTimestamp(row.timestamp);
+      if (!groups.has(logPath)) groups.set(logPath, []);
+      groups.get(logPath).push(row);
+    }
+
+    for (const [logPath, rows] of groups) {
+      await fs.promises.mkdir(path.dirname(logPath), { recursive: true });
+      const logLines = rows
+        .map((row) =>
+          JSON.stringify({
+            line_name: row.line_name,
+            model_name: row.model_name,
+            plc_id: row.plc_id,
+            plc_name: row.plc_name,
+            tag_name: row.tag_name,
+            value: row.value,
+            min: row.min,
+            max: row.max,
+            status : row.status,
+            timestamp: row.timestamp,
+          })
+        )
+        .join("\n") + "\n";
+      await fs.promises.appendFile(logPath, logLines, "utf8");
+    }
+
+    console.log(`[LOG] ${data.length} baris disimpan ke file log harian.`);
+  } catch (err) {
+    console.error("[FILE ERROR] Gagal menyimpan data ke log harian:", err);
   }
 }
 
@@ -156,20 +244,164 @@ async function processAndStoreHistory(startTime, endTime) {
   }
 }
 
-async function dbQuery(sql, params = []) {
+
+
+async function processAndStoreHistoryLog(startTime, endTime) {
+  const conn = await pool.getConnection();
+
   try {
-    const [rows] = await pool.query(sql, params);
-    return rows;
+    await conn.beginTransaction();
+
+    const dateRange = getDateRange(startTime, endTime);
+    const startTs = new Date(startTime).getTime();
+    const endTs = new Date(endTime).getTime();
+
+    // Use Map to aggregate values per (plc_id || tag_name)
+    const grouped = new Map();
+
+    // Stream each file to avoid reading huge file into memory
+    for (const date of dateRange) {
+      const logPath = getLogFilePathForTimestamp(date);
+      if (!fs.existsSync(logPath)) continue;
+
+      const fileStream = fs.createReadStream(logPath, { encoding: "utf8" });
+      let buffer = "";
+
+      for await (const chunk of fileStream) {
+        buffer += chunk;
+        let lines = buffer.split("\n");
+        buffer = lines.pop(); // leftover
+
+        for (const line of lines) {
+          if (!line || !line.trim()) continue;
+
+          let row;
+          try {
+            row = JSON.parse(line);
+          } catch (e) {
+            // invalid line, skip
+            continue;
+          }
+
+          const ts = new Date(row.timestamp).getTime();
+          if (isNaN(ts) || ts < startTs || ts >= endTs) continue;
+
+          const key = `${row.plc_id}||${row.tag_name}`;
+          if (!grouped.has(key)) {
+            grouped.set(key, {
+              plc_id: row.plc_id,
+              tag_name: row.tag_name,
+              values: [],
+              line_name: row.line_name,
+              model_name: row.model_name,
+              min_limit: row.min,
+              max_limit: row.max,
+            });
+          }
+
+          const val = parseFloat(row.value);
+          if (!isNaN(val)) grouped.get(key).values.push(val);
+        }
+      }
+
+      // handle leftover in buffer (last line without newline)
+      if (buffer && buffer.trim()) {
+        try {
+          const row = JSON.parse(buffer);
+          const ts = new Date(row.timestamp).getTime();
+          if (!isNaN(ts) && ts >= startTs && ts < endTs) {
+            const key = `${row.plc_id}||${row.tag_name}`;
+            if (!grouped.has(key)) {
+              grouped.set(key, {
+                plc_id: row.plc_id,
+                tag_name: row.tag_name,
+                values: [],
+                line_name: row.line_name,
+                model_name: row.model_name,
+                min_limit: row.min,
+                max_limit: row.max,
+              });
+            }
+            const val = parseFloat(row.value);
+            if (!isNaN(val)) grouped.get(key).values.push(val);
+          }
+        } catch (e) {
+          // ignore invalid leftover
+        }
+      }
+    } // end for dateRange
+
+    // Prepare batched inserts
+    const MAX_BATCH = 200; // safe batch size
+    let batch = [];
+    let totalProcessed = 0;
+
+    const insertHistoryBatch = async (connection, rows) => {
+      if (!rows || rows.length === 0) return;
+      const sql = `
+        INSERT INTO plc_history (
+          plc_id, tag_name, avg_value, line_name, model_name, min, max, start_time, end_time
+        ) VALUES ?
+        ON DUPLICATE KEY UPDATE
+          avg_value = VALUES(avg_value),
+          end_time  = VALUES(end_time),
+          line_name = VALUES(line_name),
+          model_name = VALUES(model_name),
+          min = VALUES(min),
+          max = VALUES(max);
+      `;
+      await connection.query(sql, [rows]);
+    };
+
+    for (const g of grouped.values()) {
+      if (!g.values || g.values.length === 0) continue;
+
+      const avg = g.values.reduce((a, b) => a + b, 0) / g.values.length;
+      batch.push([
+        g.plc_id,
+        g.tag_name,
+        avg,
+        g.line_name,
+        g.model_name,
+        g.min_limit,
+        g.max_limit,
+        startTime,
+        endTime,
+      ]);
+
+      if (batch.length >= MAX_BATCH) {
+        await insertHistoryBatch(conn, batch);
+        totalProcessed += batch.length;
+        batch = [];
+      }
+    }
+
+    // insert remaining
+    if (batch.length > 0) {
+      await insertHistoryBatch(conn, batch);
+      totalProcessed += batch.length;
+    }
+
+    await conn.commit();
+    console.log(`[DB HISTORY] ${totalProcessed} baris diproses ke plc_history (log mode).`);
+    return { processed: totalProcessed };
   } catch (err) {
-    console.error("[DB ERROR] Query gagal:", err);
+    await conn.rollback();
+    console.error("[HISTORY ERROR] Gagal memproses data history:", err);
     throw err;
+  } finally {
+    conn.release();
   }
 }
+
+
 
 module.exports = {
   saveHistoricalData,
   getLastDataTimestamp,
   cleanDataOlderThanToday,
   processAndStoreHistory,
-  dbQuery
+  dbQuery,
+  saveHistoricalDataLog,
+  processAndStoreHistoryLog,
 };

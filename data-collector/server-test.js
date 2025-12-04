@@ -294,6 +294,49 @@ async function refreshStandards() {
   }
 }
 
+
+
+// -------------------------------------------------------------
+// SYNC WAKTU KE PLC (setiap 3 menit — bisa disesuaikan)
+// -------------------------------------------------------------
+async function syncTimeToPlc(plc) {
+  try {
+    if (!plc.isConnected) {
+      await plc.client.connectTCP(plc.ip, { port: plc.port });
+      plc.isConnected = true;
+      console.log(`[SYNC RECONNECT] Reconnected to ${plc.name}`);
+    }
+
+    plc.client.setID(String(plc.unitId));
+
+    const now = DateTime.now().setZone(JAKARTA_TIMEZONE);
+    const hour = now.hour;
+    const minute = now.minute;
+    const day = now.day;
+
+    // Pastikan register sesuai urutan PLC
+    await plc.client.writeRegister(201, minute);
+    await plc.client.writeRegister(202, hour);
+    await plc.client.writeRegister(203, day);
+
+    console.log(`[TIME SYNC] ${plc.name}: ${hour}:${minute} tanggal ${day}`);
+  } catch (e) {
+    console.error(`[TIME SYNC ERROR] ${plc.name}: ${e.message}`);
+    plc.isConnected = false;
+  }
+}
+
+
+function startTimeSync() {
+  const INTERVAL_MS = 60 * 1000; // 3 menit
+  console.log(`⏱️ Sinkronisasi waktu ke PLC setiap ${INTERVAL_MS / 1000}s`);
+  setInterval(async () => {
+    for (const plc of plcList) {
+      await syncTimeToPlc(plc);
+    }
+  }, INTERVAL_MS);
+}
+
 // ============================================================
 // MODBUS POLLING LOOP — ✅ DIPERBARUI DENGAN MAPPING
 // ============================================================
@@ -525,6 +568,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(API_PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${API_PORT}`);
   await initTableForToday().catch(console.error);
+  startTimeSync()
   startDailyCleaner();
   periodicCheck();
   connectAllPlcs();

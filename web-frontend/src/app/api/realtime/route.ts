@@ -3,10 +3,16 @@ import { NextResponse, NextRequest } from "next/server";
 // --- 1. Define Interfaces for Type Safety ---
 
 interface DataPoint {
+    line_name: string;
+    model_id: string;
+    model_name: string;
     plc_id: string;
     plc_name: string;
     tag_name: string;
     value: number;
+    min: number | null;
+    max: number | null;
+    status: string;
     timestamp: string; // Assuming a timestamp is always present
 }
 
