@@ -1,0 +1,58 @@
+2025-12-04T14:33:01: PM2 log: ===============================================================================
+2025-12-04T14:33:01: PM2 log: --- New PM2 Daemon started ----------------------------------------------------
+2025-12-04T14:33:01: PM2 log: Time                 : Thu Dec 04 2025 14:33:01 GMT+0700 (Indochina Time)
+2025-12-04T14:33:01: PM2 log: PM2 version          : 6.0.14
+2025-12-04T14:33:01: PM2 log: Node.js version      : 22.14.0
+2025-12-04T14:33:01: PM2 log: Current arch         : x64
+2025-12-04T14:33:01: PM2 log: PM2 home             : y
+2025-12-04T14:33:01: PM2 log: PM2 PID file         : C:\Users\user\Desktop\PWI2\spc-monitoring-system\y\pm2.pid
+2025-12-04T14:33:01: PM2 log: RPC socket file      : \\.\pipe\rpc.sock
+2025-12-04T14:33:01: PM2 log: BUS socket file      : \\.\pipe\pub.sock
+2025-12-04T14:33:01: PM2 log: Application log path : C:\Users\user\Desktop\PWI2\spc-monitoring-system\y\logs
+2025-12-04T14:33:01: PM2 log: Worker Interval      : 30000
+2025-12-04T14:33:01: PM2 log: Process dump file    : C:\Users\user\Desktop\PWI2\spc-monitoring-system\y\dump.pm2
+2025-12-04T14:33:01: PM2 log: Concurrent actions   : 2
+2025-12-04T14:33:01: PM2 log: SIGTERM timeout      : 1600
+2025-12-04T14:33:01: PM2 log: Runtime Binary       : C:\Program Files\nodejs\node.exe
+2025-12-04T14:33:01: PM2 log: ===============================================================================
+2025-12-04T14:33:01: PM2 log: App [spc-api-dummy:0] starting in -cluster mode-
+2025-12-04T14:33:01: PM2 log: App [spc-frontend:1] starting in -fork mode-
+2025-12-04T14:33:01: PM2 log: App [spc-frontend:1] online
+2025-12-04T14:33:01: PM2 log: App [spc-api-dummy:0] online
+2025-12-04T14:35:40: PM2 log: Stopping app:spc-api-dummy id:0
+2025-12-04T14:35:40: PM2 log: Stopping app:spc-frontend id:1
+2025-12-04T14:35:40: PM2 log: App name:spc-api-dummy id:0 disconnected
+2025-12-04T14:35:40: PM2 log: App [spc-api-dummy:0] exited with code [1] via signal [SIGINT]
+2025-12-04T14:35:40: PM2 log: App [spc-frontend:1] exited with code [1] via signal [SIGINT]
+2025-12-04T14:35:41: PM2 log: pid=7852 msg=process killed
+2025-12-04T14:35:41: PM2 log: pid=17220 msg=process killed
+2025-12-04T14:35:41: PM2 log: PM2 successfully stopped
+2025-12-04T14:35:55: PM2 log: ===============================================================================
+2025-12-04T14:35:55: PM2 log: --- New PM2 Daemon started ----------------------------------------------------
+2025-12-04T14:35:55: PM2 log: Time                 : Thu Dec 04 2025 14:35:55 GMT+0700 (Indochina Time)
+2025-12-04T14:35:55: PM2 log: PM2 version          : 6.0.14
+2025-12-04T14:35:55: PM2 log: Node.js version      : 22.14.0
+2025-12-04T14:35:55: PM2 log: Current arch         : x64
+2025-12-04T14:35:55: PM2 log: PM2 home             : y
+2025-12-04T14:35:55: PM2 log: PM2 PID file         : C:\Users\user\Desktop\PWI2\spc-monitoring-system\y\pm2.pid
+2025-12-04T14:35:55: PM2 log: RPC socket file      : \\.\pipe\rpc.sock
+2025-12-04T14:35:55: PM2 log: BUS socket file      : \\.\pipe\pub.sock
+2025-12-04T14:35:55: PM2 log: Application log path : C:\Users\user\Desktop\PWI2\spc-monitoring-system\y\logs
+2025-12-04T14:35:55: PM2 log: Worker Interval      : 30000
+2025-12-04T14:35:55: PM2 log: Process dump file    : C:\Users\user\Desktop\PWI2\spc-monitoring-system\y\dump.pm2
+2025-12-04T14:35:55: PM2 log: Concurrent actions   : 2
+2025-12-04T14:35:55: PM2 log: SIGTERM timeout      : 1600
+2025-12-04T14:35:55: PM2 log: Runtime Binary       : C:\Program Files\nodejs\node.exe
+2025-12-04T14:35:55: PM2 log: ===============================================================================
+2025-12-04T14:36:05: PM2 log: App [spc-api-dummy:0] starting in -cluster mode-
+2025-12-04T14:36:05: PM2 log: App [spc-frontend:1] starting in -fork mode-
+2025-12-04T14:36:05: PM2 log: App [spc-frontend:1] online
+2025-12-04T14:36:05: PM2 log: App [spc-api-dummy:0] online
+2025-12-04T14:36:33: PM2 log: Stopping app:spc-api-dummy id:0
+2025-12-04T14:36:33: PM2 log: Stopping app:spc-frontend id:1
+2025-12-04T14:36:33: PM2 log: App name:spc-api-dummy id:0 disconnected
+2025-12-04T14:36:33: PM2 log: App [spc-api-dummy:0] exited with code [1] via signal [SIGINT]
+2025-12-04T14:36:33: PM2 log: App [spc-frontend:1] exited with code [1] via signal [SIGINT]
+2025-12-04T14:36:33: PM2 log: pid=17304 msg=process killed
+2025-12-04T14:36:33: PM2 log: pid=13568 msg=process killed
+2025-12-04T14:36:33: PM2 log: PM2 successfully stopped
