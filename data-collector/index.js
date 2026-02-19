@@ -1,7 +1,7 @@
 // Core service untuk Polling Modbus TCP/IP, Logging DB, dan Push Real-time via WS
 
 const ModbusRTU = require("modbus-serial");
-const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("../config");
+const { PLCS, DATA_POINTS_MAP, POLLING_INTERVAL } = require("./config");
 const { pushLatestData } = require("../websocket/ws-emitter");
 const {
   saveHistoricalData,

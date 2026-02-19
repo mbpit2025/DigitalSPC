@@ -122,10 +122,12 @@ function generateDummyData() {
     console.error("❌ PLCS is empty!");
     return [];
   }
-
+  
+  // console.log("PLCS:", PLCS);
+  
   const data = [];
   const timestamp = DateTime.now().setZone(JAKARTA_TIMEZONE).toISO();
-
+  
   PLCS.forEach((plc) => {
     DATA_POINTS_MAP.forEach((point) => {
       const tagName = point.tag_name;
@@ -146,25 +148,31 @@ function generateDummyData() {
       }
 
       // 🔄 Fallback ke tagRanges jika tidak ada di DB
-      if (min === null || max === null) {
-        if (plc.tagRanges) {
-          let range = plc.tagRanges.default || GLOBAL_DEFAULT_RANGE;
-          for (const key in plc.tagRanges) {
-            if (key !== "default" && key.split("|").includes(tagName)) {
-              range = plc.tagRanges[key];
-              break;
-            }
+      let min_gen, max_gen;
+      if (plc.tagRanges) {
+        // Cari tagRanges yang cocok dengan tagName
+        let found = false;
+        for (const key in plc.tagRanges) {
+          if (key !== "default" && key.split("|").includes(tagName)) {
+            min_gen = plc.tagRanges[key].min;
+            max_gen = plc.tagRanges[key].max;
+            found = true;
+            break;
           }
-          min = range.min;
-          max = range.max;
-        } else {
-          min = GLOBAL_DEFAULT_RANGE.min;
-          max = GLOBAL_DEFAULT_RANGE.max;
         }
-      }
+        // Jika tidak ditemukan, pakai default
+        if (!found) {
+          min_gen = plc.tagRanges.default.min;
+          max_gen = plc.tagRanges.default.max;
+        }
 
-      // 🎯 Generate nilai acak dalam rentang
-      const value = randomInRangeDecimal(min, max);
+      } else {
+        min_gen = GLOBAL_DEFAULT_RANGE.min;
+        max_gen = GLOBAL_DEFAULT_RANGE.max;
+      }
+      
+      console.log(min_gen, max_gen)
+      const value = randomInRangeDecimal(min_gen, max_gen);
 
       // 📦 Kemas data
       data.push({

@@ -8,23 +8,23 @@ import { useDashboardData } from "@/context/DashboardDataContext";
 
 interface DataPoint {
   plc_id: number;
+  id_device: string;
+  id_area: string;
   plc_name: string;
   tagname: string;
-  pressure: string;
-  time: string;
+  tekanan_max: string;
+  created_at: string;
   count: number;
 }
 
 const DATA_MAP = {
   "B1-01": {
-    plc_name: "UNIVERSAL PRESS_B1-02 RIGHT",
-    tag_name: "data_tag_8",
-    time: "data_tag_6",
+    id_device: "0016",
+    id_area: "10087",
   },
   "B1-02": {
-    plc_name: "UNIVERSAL PRESS_B1-02 LEFT",
-    tag_name: "data_tag_6",
-    time: "data_tag_9",
+    id_device: "0017",
+    id_area: "10089",
   },
 };
 
@@ -35,7 +35,7 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
 
   // ✅ Hooks dulu, jangan return dulu
   const config = DATA_MAP[selectedCell];
-  const selectedPlcIds = config ? [config.plc_name] : [];
+  const selectedPlcIds = config ? [config.id_device] : [];
   const API_ENDPOINT = `http://10.2.11.4:6060/api/get_pressure_data`;
 
   const fetchData = useCallback(async () => {
@@ -43,8 +43,15 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
       const res = await fetch(API_ENDPOINT, { cache: "no-store" });
       const json = await res.json();
       const dataArray: DataPoint[] = Array.isArray(json) ? json : json.data || [];
-
-      setDataPwi(dataArray);
+      // Only keep the latest data per id_device
+      const latestByDevice: { [id: string]: DataPoint } = {};
+      dataArray.forEach((item) => {
+        const prev = latestByDevice[item.id_device];
+        if (!prev || new Date(item.created_at || item.created_at).getTime() > new Date(prev.created_at || prev.created_at).getTime()) {
+          latestByDevice[item.id_device] = item;
+        }
+      });
+      setDataPwi(Object.values(latestByDevice));
       setIsLoading(false);
     } catch (err) {
       console.error("Fetch error:", err);
@@ -74,9 +81,9 @@ export const UniversalCard = ({ selectedCell, selectedModel }: CardProps) => {
   const { UP_PRESSURE_MIN = 0, UP_PRESSURE_MAX = 100 } = standards;
 
   const filteredData = dataPwi.filter((item) =>
-    selectedPlcIds.includes(item.plc_name)
+    selectedPlcIds.includes(item.id_device)
   );
-  const pressureValue = filteredData[0]?.pressure ?? "0.00";
+  const pressureValue = filteredData[0]?.tekanan_max ?? "0.00";
 
   const isHotNormal =
     !isNaN(Number(pressureValue)) &&

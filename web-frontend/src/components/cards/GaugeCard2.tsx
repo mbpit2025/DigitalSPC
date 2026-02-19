@@ -8,23 +8,23 @@ import { useDashboardData } from "@/context/DashboardDataContext";
 
 interface DataPoint {
   plc_id: number;
+  id_device: string;
+  id_area: string;
   plc_name: string;
   tagname: string;
-  pressure: string;
-  time: string;
+  tekanan_max: string;
+  created_at: string;
   count: number;
 }
 
 const DATA_MAP = {
   "B1-01": {
-    plc_name: "GAUGE MARKING_B1-02 RIGHT",
-    tag_name: "data_tag_7",
-    time: "data_tag_2",
+    id_device: "0014",
+    id_area: "10087",
   },
   "B1-02": {
-    plc_name: "GAUGE MARKING_B1-02 LEFT",
-    tag_name: "data_tag_5",
-    time: "data_tag_4",
+    id_device: "0015",
+    id_area: "10089",
   },
 };
 
@@ -34,24 +34,29 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
   const { standardData } = useDashboardData();
   const config = DATA_MAP[selectedCell];
 
-const fetchData = async () => {
+  const fetchData = async () => {
     try {
-    const res = await fetch(`http://10.2.11.4:6060/api/get_pressure_data`, {
-      cache: "no-store",
-    });
-
+      const res = await fetch(`http://10.2.11.4:6060/api/get_pressure_data`, {
+        cache: "no-store",
+      });
       const json = await res.json();
-      const dataArray: DataPoint[] = Array.isArray(json)
-        ? json
-        : json.data || [];
-
-      setDataPwi(dataArray);
+      const dataArray: DataPoint[] = Array.isArray(json) ? json : json.data || [];
+      // Only keep the latest data per id_device
+      const latestByDevice: { [id: string]: DataPoint } = {};
+      dataArray.forEach((item) => {
+        const prev = latestByDevice[item.id_device];
+        if (!prev || new Date(item.created_at || item.created_at).getTime() > new Date(prev.created_at || prev.created_at).getTime()) {
+          latestByDevice[item.id_device] = item;
+        }
+      });
+      setDataPwi(Object.values(latestByDevice));
       setIsLoading(false);
     } catch (error) {
       console.error("Fetch error:", error);
       setIsLoading(false);
     }
   };
+    console.log(dataPwi)
 
   // ✅ Hook SELALU dipanggil → tidak conditional
   useEffect(() => {
@@ -59,6 +64,8 @@ const fetchData = async () => {
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, []);
+
+
 
 
 
@@ -79,13 +86,13 @@ const fetchData = async () => {
 
   const { GM_PRESS_MAX, GM_PRESS_MIN } = standards;
 
-  const selectedPlcIds = config ? [config.plc_name] : [];
+  const selectedPlcIds = config ? [config.id_device] : [];
 
   const filteredData = dataPwi.filter((item) =>
-    selectedPlcIds.includes(item.plc_name)
+    selectedPlcIds.includes(item.id_device)
   );
 
-  const pressureValue = filteredData[0]?.pressure || "0.00";
+  const pressureValue = filteredData[0]?.tekanan_max || "0.00";
 
   const isHotNormal =
     !isNaN(Number(pressureValue)) &&
