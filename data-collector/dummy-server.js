@@ -171,7 +171,7 @@ function generateDummyData() {
         max_gen = GLOBAL_DEFAULT_RANGE.max;
       }
       
-      console.log(min_gen, max_gen)
+      // console.log(min_gen, max_gen)
       const value = randomInRangeDecimal(min_gen, max_gen);
 
       // 📦 Kemas data

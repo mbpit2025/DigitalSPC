@@ -40,10 +40,14 @@ const responseData: ResponseData = {
  */
 export async function GET() {
   try {
-    // Menggunakan NextResponse.json untuk merespon dengan data JSON
-    return NextResponse.json(responseData, { status: 200 });
+    const res = await fetch("http://10.2.11.4:6060/api/get_cell_information");
+    if (!res.ok) {
+      throw new Error(`Failed to fetch: ${res.status}`);
+    }
+    const data = await res.json();
+    return NextResponse.json(data, { status: 200 });
   } catch (error) {
-    console.error("Error generating API response:", error);
+    console.error("Error fetching cell information:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

@@ -56,7 +56,7 @@ export const GaugeCard2 = ({ selectedCell, selectedModel }: CardProps) => {
       setIsLoading(false);
     }
   };
-    console.log(dataPwi)
+    // console.log(dataPwi)
 
   // ✅ Hook SELALU dipanggil → tidak conditional
   useEffect(() => {

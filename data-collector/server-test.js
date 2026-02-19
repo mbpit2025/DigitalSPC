@@ -459,6 +459,8 @@ async function pollingLoop() {
     if (allData.length > 0) {
       try {
         await saveHistoricalData(allData);
+        await pushLatestData(allData);
+        console.log(`[✅] Generated & saved ${allData.length} data points`);
       } catch (dbErr) {
         console.warn("💾 Failed to save history:", dbErr?.message || dbErr);
       }

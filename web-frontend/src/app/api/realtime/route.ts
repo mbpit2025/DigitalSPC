@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         if (body.latestData) {
             // PERBAIKAN: Type assertion is not needed as body is already typed
             latestData = body.latestData;
-            console.log("[API] Data diterima:", latestData.length, "rows");
+            console.log("[API] Data diterima:", latestData.length, "rows", " | " , (latestData.length/156*100), "%" );
         }
 
         if (body.notification) {

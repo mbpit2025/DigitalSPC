@@ -32,8 +32,8 @@ PLCS.forEach(plc => {
     ...(plc.name.includes('CHAMBER') ? {
       'data2|data3': { min: 75.7, max: 76 },
       'data4|data5': { min: 50.7, max: 52 },
-      'data6|data7': { min: 51, max: 52 },
-      'data8|data9': { min: 62, max: 63 },
+      'data6|data7': { min: 52, max: 52.7 },
+      'data8|data9': { min: 62, max: 63.5 },
     } : {}),
     ...(plc.name.includes('CHILLER') ? {
       'data2|data3': { min: 20, max: 21.5 }

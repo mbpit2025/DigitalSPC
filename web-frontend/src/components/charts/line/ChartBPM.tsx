@@ -45,16 +45,16 @@ const TAG_LABELS: { [key: string]: string } = {
 
 const COLORS: { [key: string]: string } = {
 //hot//
-"data4": 'rgb(255, 50, 50)',   // Merah
-"data5": 'rgb(255, 100, 0)',  // Oranye Merah
-"data6": 'rgb(255, 150, 0)',  // Oranye
-"data7": 'rgb(255, 200, 0)',  // Oranye Kuning
+"data2": 'rgb(255, 50, 50)',   // Merah
+"data3": 'rgb(255, 100, 0)',  // Oranye Merah
+"data8": 'rgb(255, 150, 0)',  // Oranye
+"data9": 'rgb(255, 200, 0)',  // Oranye Kuning
 
 //cold//
-"data2": 'rgb(0, 100, 200)',  // Biru Tua
-"data3": 'rgb(0, 150, 150)',  // Biru-Hijau Laut
-"data8": 'rgb(0, 200, 100)',  // Hijau Mint
-"data9": 'rgb(0, 255, 0)',    // Hijau Cerah 
+"data4": 'rgb(0, 100, 200)',  // Biru Tua
+"data5": 'rgb(0, 150, 150)',  // Biru-Hijau Laut
+"data6": 'rgb(0, 200, 100)',  // Hijau Mint
+"data7": 'rgb(0, 255, 0)',    // Hijau Cerah 
 };
 
 const POLLING_INTERVAL = 15000; 
